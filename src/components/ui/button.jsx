@@ -44,13 +44,25 @@ function Button({
   className,
   variant = "default",
   size = "default",
+  loading,
+  children,
   ...props
 }) {
   return (
     <ButtonPrimitive
       data-slot="button"
       className={cn(buttonVariants({ variant, size, className }))}
-      {...props} />
+      disabled={loading || props.disabled}
+      {...props}
+    >
+      {loading ? (
+        <span className="flex items-center gap-2">
+          {/* You can add a spinner icon here if you have one in Icons.jsx */}
+          <span className="animate-spin h-4 w-4 border-2 border-white/20 border-t-white rounded-full"></span>
+          {children}
+        </span>
+      ) : children}
+    </ButtonPrimitive>
   );
 }
 

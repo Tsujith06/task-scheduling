@@ -1,121 +1,132 @@
 import { useState, useEffect } from "react";
 import { Ico, I } from "../components/Icons";
+import { login } from "../api";
+import { Button } from "../components/ui/button";
+import loginIllustration from "../assets/login-illustration.png";
 
 export const LoginPage = ({ onLogin }) => {
     const [showPw, setShowPw] = useState(false);
     const [email, setEmail] = useState("");
     const [pw, setPw] = useState("");
-    const [remember, setRemember] = useState(false);
     const [err, setErr] = useState("");
     const [loading, setLoading] = useState(false);
     const [mounted, setMounted] = useState(false);
 
     useEffect(() => { setTimeout(() => setMounted(true), 80); }, []);
 
-    const submit = () => {
+    const submit = async () => {
         if (!email || !pw) { setErr("Please fill in all fields."); return; }
-        setErr(""); setLoading(true);
-        setTimeout(() => { setLoading(false); onLogin(); }, 1100);
+        setErr("");
+        setLoading(true);
+
+        try {
+            const res = await login(email, pw);
+            if (res.data.status === 'success') {
+                onLogin(res.data.user);
+            } else {
+                setErr(res.data.message || "Login failed");
+            }
+        } catch (error) {
+            console.error(error);
+            if (!error.response) {
+                setErr("Network Error: Backend server is unreachable. Please ensure it is running on port 5000.");
+            } else {
+                setErr(error.response?.data?.message || "Invalid credentials. Please try again.");
+            }
+        } finally {
+            setLoading(false);
+        }
     };
 
-    const inp = "w-full py-3 rounded-xl border border-gray-200 text-sm text-gray-800 bg-gray-50 outline-none transition-all focus:border-fuchsia-400 focus:bg-white";
-
     return (
-        <div className="min-h-screen flex items-center justify-center p-6"
-            style={{ background: "linear-gradient(135deg,#F0F2FF 0%,#F8F9FC 50%,#EDF9F4 100%)" }}>
+        <div className="h-screen w-screen flex items-center justify-center bg-white p-4 lg:p-10 font-['Poppins'] overflow-hidden">
             <style>{`
-        input::placeholder{color:#C4C9D6}
-        .fu{opacity:0;transform:translateY(16px);transition:opacity .45s ease,transform .45s ease}
-        .fu.in{opacity:1;transform:none}
-      `}</style>
+                @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&display=swap');
+                
+                .shake { animation: shake 0.5s cubic-bezier(.36, .07, .19, .97) both; }
+                @keyframes shake {
+                    10%, 90% { transform: translate3d(-1px, 0, 0); }
+                    20%, 80% { transform: translate3d(2px, 0, 0); }
+                    30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
+                    40%, 60% { transform: translate3d(4px, 0, 0); }
+                }
+            `}</style>
 
-            {/* Bg orbs */}
-            <div className="fixed inset-0 pointer-events-none overflow-hidden">
-                <div className="absolute -top-32 -left-20 w-96 h-96 rounded-full opacity-25"
-                    style={{ background: "radial-gradient(circle,#E0B5FA,transparent)" }} />
-                <div className="absolute -bottom-20 -right-20 w-80 h-80 rounded-full opacity-20"
-                    style={{ background: "radial-gradient(circle,#A7F3D0,transparent)" }} />
-            </div>
+            <div className={`w-full max-w-7xl h-full max-h-[850px] grid grid-cols-1 lg:grid-cols-2 bg-white rounded-[40px] overflow-hidden border border-slate-50 shadow-2xl shadow-slate-100/50 transition-all duration-1000 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'} `}>
 
-            <div className="w-full max-w-sm relative z-10">
-                {/* Logo */}
-                <div className={`fu ${mounted ? "in" : ""} text-center mb-8`} style={{ transitionDelay: ".05s" }}>
-                    <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl mb-4 shadow-lg"
-                        style={{ background: "linear-gradient(135deg,#6015C1,#8B2AE0)" }}>
-                        <Ico path={I.star} size={20} cls="text-white" />
-                    </div>
-                    <h1 className="text-2xl font-bold text-gray-900 tracking-tight">EduTrack</h1>
-                    <p className="text-sm text-gray-400 mt-1">Student project workspace</p>
+                {/* Visual Panel */}
+                <div className="hidden lg:flex items-center justify-center p-16 bg-[#F8F9FB] relative">
+                    <img
+                        src={loginIllustration}
+                        alt="Collaboration"
+                        className="w-full h-auto max-w-lg object-contain"
+                        onError={(e) => { e.target.src = "https://illustrations.popsy.co/purple/collaboration.svg"; }}
+                    />
                 </div>
 
-                {/* Form card */}
-                <div className={`fu ${mounted ? "in" : ""} bg-white rounded-3xl shadow-xl border border-gray-100 p-8`}
-                    style={{ transitionDelay: ".12s" }}>
-                    <h2 className="text-lg font-semibold text-gray-900 mb-0.5">Sign in</h2>
-                    <p className="text-xs text-gray-400 mb-7">Enter your credentials to continue</p>
-
-                    <div className="space-y-4">
-                        <div>
-                            <label className="block text-xs font-semibold text-gray-500 mb-1.5">Email / Register No.</label>
-                            <div className="relative">
-                                <Ico path={I.mail} size={15} cls="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: "#C4C9D6" }} />
-                                <input type="text" value={email} onChange={e => setEmail(e.target.value)}
-                                    placeholder="21CS045 or you@college.edu"
-                                    className={`${inp} pl-10 pr-4`}
-                                    onFocus={e => e.target.style.boxShadow = "0 0 0 3px rgba(96,21,193,.1)"}
-                                    onBlur={e => e.target.style.boxShadow = "none"} />
-                            </div>
+                {/* Form Panel */}
+                <div className="flex flex-col items-center justify-center p-8 lg:p-24 bg-white relative">
+                    <div className="w-full max-w-sm">
+                        {/* Logo */}
+                        <div className="flex flex-col items-center mb-10">
+                            <span className="font-semibold text-2xl text-[#6015C1] tracking-tighter">EduTrack</span>
                         </div>
 
-                        <div>
-                            <label className="block text-xs font-semibold text-gray-500 mb-1.5">Password</label>
-                            <div className="relative">
-                                <Ico path={I.lock} size={15} cls="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: "#C4C9D6" }} />
-                                <input type={showPw ? "text" : "password"} value={pw} onChange={e => setPw(e.target.value)}
-                                    placeholder="••••••••"
-                                    className={`${inp} pl-10 pr-10`}
-                                    onFocus={e => e.target.style.boxShadow = "0 0 0 3px rgba(96,21,193,.1)"}
-                                    onBlur={e => e.target.style.boxShadow = "none"} />
-                                <button onClick={() => setShowPw(!showPw)}
-                                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-300 hover:text-gray-500 transition-colors">
-                                    <Ico path={showPw ? I.eyeOff : I.eye} size={15} />
-                                </button>
-                            </div>
+                        {/* Title Section */}
+                        <div className="text-center mb-10">
+                            <h2 className="text-3xl font-semibold text-slate-900 mb-2">Welcome Back</h2>
+                            <p className="text-slate-400 text-sm font-medium">Enter your email and password to access your account</p>
                         </div>
 
-                        <div className="flex items-center justify-between">
-                            <label className="flex items-center gap-2 cursor-pointer">
-                                <div onClick={() => setRemember(!remember)}
-                                    className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-all cursor-pointer ${remember ? "border-fuchsia-500 bg-fuchsia-500" : "border-gray-300 bg-white"}`}>
-                                    {remember && <Ico path={I.check} size={9} cls="text-white" />}
+                        {/* Form */}
+                        <div className={`space-y-6 ${err ? 'shake' : ''} `}>
+                            <div className="space-y-2">
+                                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-widest pl-1">Email</label>
+                                <input
+                                    type="text"
+                                    value={email}
+                                    onChange={e => setEmail(e.target.value)}
+                                    placeholder="Enter your Email"
+                                    className="w-full h-14 px-5 bg-slate-50 border border-slate-100 rounded-xl text-sm font-medium text-slate-900 outline-none focus:bg-white focus:border-[#6015C1] focus:ring-4 focus:ring-purple-50 transition-all placeholder:text-slate-300"
+                                />
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-widest pl-1">Password</label>
+                                <div className="relative">
+                                    <input
+                                        type={showPw ? "text" : "password"}
+                                        value={pw}
+                                        onChange={e => setPw(e.target.value)}
+                                        placeholder="Enter your Password"
+                                        className="w-full h-14 px-5 pr-14 bg-slate-50 border border-slate-100 rounded-xl text-sm font-medium text-slate-900 outline-none focus:bg-white focus:border-[#6015C1] focus:ring-4 focus:ring-purple-50 transition-all placeholder:text-slate-300"
+                                    />
+                                    <button
+                                        onClick={() => setShowPw(!showPw)}
+                                        className="absolute right-4 top-1/2 -translate-y-1/2 p-2 text-slate-300 hover:text-[#6015C1] transition-colors"
+                                    >
+                                        <Ico path={showPw ? I.eyeOff : I.eye} size={18} />
+                                    </button>
                                 </div>
-                                <span className="text-xs text-gray-500 select-none">Remember me</span>
-                            </label>
-                            <button className="text-xs font-medium text-fuchsia-500 hover:text-fuchsia-700 transition-colors">Forgot password?</button>
-                        </div>
-
-                        {err && (
-                            <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-xl px-3 py-2.5">
-                                <Ico path={I.alert} size={13} cls="text-red-500 flex-shrink-0" />
-                                <p className="text-xs text-red-600">{err}</p>
                             </div>
-                        )}
 
-                        <button onClick={submit} disabled={loading}
-                            className="w-full py-3 rounded-xl text-sm font-semibold text-white transition-all duration-200 flex items-center justify-center gap-2 mt-1"
-                            style={{ background: loading ? "#9E44F2" : "linear-gradient(135deg,#6015C1,#7A22E1)", boxShadow: "0 4px 14px rgba(96,21,193,.3)" }}>
-                            {loading
-                                ? <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />Signing in…</>
-                                : <>Sign in <Ico path={I.arrow} size={15} /></>}
-                        </button>
+                            {err && (
+                                <div className="p-4 bg-rose-50 border border-rose-100 rounded-xl flex items-center gap-3">
+                                    <Ico path={I.alert} size={16} cls="text-rose-500 flex-shrink-0" />
+                                    <p className="text-xs font-semibold text-rose-600">{err}</p>
+                                </div>
+                            )}
+
+                            <Button
+                                onClick={submit}
+                                loading={loading}
+                                className="w-full h-14 bg-[#6015C1] hover:bg-[#4A0D97] text-white rounded-xl font-semibold text-sm tracking-wide transition-all shadow-xl shadow-purple-100 flex items-center justify-center"
+                            >
+                                {loading ? "Verifying..." : "Sign In"}
+                            </Button>
+
+                        </div>
                     </div>
-                </div>
-
-                <div className={`fu ${mounted ? "in" : ""} text-center mt-5`} style={{ transitionDelay: ".2s" }}>
-                    <p className="text-xs text-gray-400">
-                        Need help?{" "}
-                        <button className="text-fuchsia-500 font-medium hover:underline">Contact admin support</button>
-                    </p>
                 </div>
             </div>
         </div>

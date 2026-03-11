@@ -1,58 +1,75 @@
+import { useState, useEffect } from "react";
 import { Ico, I } from "../components/Icons";
 import { Pill, Avatar, Bar, Card, SectionTitle } from "../components/SharedComponents";
+import { getTasks, getProject, getUsers, getPhases } from "../api";
 
-export const Dashboard = () => {
+export const Dashboard = ({ user }) => {
+    const [tasks, setTasks] = useState([]);
+    const [project, setProject] = useState(null);
+    const [members, setMembers] = useState([]);
+    const [phases, setPhases] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchAll = async () => {
+            try {
+                const [taskRes, projRes, userRes, phasesRes] = await Promise.all([
+                    getTasks(),
+                    getProject('ALPHA-001'),
+                    getUsers({ role: 'Student' }),
+                    getPhases()
+                ]);
+
+                setTasks(taskRes.data);
+                setProject(projRes.data);
+                setPhases(phasesRes.data);
+
+                // Map contributions
+                const students = userRes.data.map(s => ({
+                    name: s.name,
+                    done: taskRes.data.filter(t => t.assignee === s.name && t.status === "Completed").length,
+                    total: taskRes.data.filter(t => t.assignee === s.name).length,
+                    you: s.email === user?.email
+                }));
+                setMembers(students);
+
+            } catch (err) {
+                console.error("Dashboard fetch error:", err);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchAll();
+    }, [user?.email]);
+
+    const total = tasks.length;
+    const completed = tasks.filter(t => t.status === "Completed").length;
+    const progress = tasks.filter(t => t.status === "In Progress").length;
+    const pending = tasks.filter(t => t.status === "To-Do").length;
+
     const stats = [
-        { label: "Total Tasks", value: "26", icon: I.chart, color: "#6015C1", bg: "#EEF2FF" },
-        { label: "Completed", value: "18", icon: I.check, color: "#10B981", bg: "#ECFDF5", sub: "+3 this week" },
-        { label: "In Progress", value: "5", icon: I.clock, color: "#F59E0B", bg: "#FFFBEB" },
-        { label: "Pending", value: "3", icon: I.alert, color: "#EF4444", bg: "#FEF2F2", sub: "2 overdue" },
+        { label: "Total Tasks", value: total.toString(), icon: I.chart, color: "#6015C1", bg: "#EEF2FF" },
+        { label: "Completed", value: completed.toString(), icon: I.check, color: "#10B981", bg: "#ECFDF5", sub: `${total > 0 ? Math.round((completed / total) * 100) : 0}% done` },
+        { label: "In Progress", value: progress.toString(), icon: I.clock, color: "#F59E0B", bg: "#FFFBEB" },
+        { label: "Pending", value: pending.toString(), icon: I.alert, color: "#EF4444", bg: "#FEF2F2" },
     ];
 
-    const members = [
-        { name: "Arjun Kumar", done: 6, total: 8, you: true },
-        { name: "Priya Singh", done: 5, total: 7 },
-        { name: "Rohit Das", done: 4, total: 6 },
-        { name: "Sneha M", done: 5, total: 5 },
-    ];
 
-    const milestones = [
-        { label: "Requirements", pct: 100, color: "#10B981", status: "Done" },
-        { label: "System Design", pct: 75, color: "#6015C1", status: "Active" },
-        { label: "Development", pct: 40, color: "#3B82F6", status: "Active" },
-        { label: "Testing", pct: 0, color: "#E5E7EB", status: "Pending" },
-    ];
 
-    const feed = [
-        { text: "Mentor commented on System Design doc", time: "2h ago", color: "#6015C1" },
-        { text: "Task 'API Integration' marked complete", time: "5h ago", color: "#10B981" },
-        { text: "New task 'UI Testing' assigned to you", time: "1d ago", color: "#F59E0B" },
-        { text: "Milestone 2 deadline updated to Apr 20", time: "2d ago", color: "#3B82F6" },
-    ];
-
-    const notifs = [
-        { title: "Review Scheduled", desc: "Apr 15, 10:00 AM", color: "#6015C1" },
-        { title: "Deadline Reminder", desc: "Phase 2 — 3 days left", color: "#EF4444" },
-        { title: "New Task Assigned", desc: "'Unit Testing' added", color: "#10B981" },
-    ];
+    if (loading) return <div className="p-10 text-center text-slate-400 font-semibold animate-pulse">Loading synchronized data...</div>;
 
     return (
         <div className="p-7 space-y-5 max-w-7xl mx-auto">
-            {/* Hero banner */}
-            <div className="rounded-2xl p-6 flex items-center justify-between overflow-hidden relative"
-                style={{ background: "linear-gradient(135deg,#4A0D97 0%,#6015C1 50%,#7A22E1 100%)" }}>
-                <div className="absolute inset-0 opacity-10" style={{ backgroundImage: "radial-gradient(circle at 90% 50%,white 0%,transparent 55%)" }} />
-                <div className="relative z-10">
-                    <p className="text-fuchsia-200 text-xs font-medium mb-0.5">Good morning 👋</p>
-                    <h2 className="text-white text-xl font-bold tracking-tight">Arjun Kumar</h2>
-                    <div className="flex flex-wrap items-center gap-2.5 mt-2.5">
-                        <span className="bg-white/20 text-white text-xs font-medium px-2.5 py-1 rounded-lg">Team Alpha</span>
-                        <span className="text-fuchsia-200 text-xs">Smart Attendance System · Dr. Ramesh V</span>
+            {/* Hero header */}
+            <div className="py-4 flex items-center justify-between">
+                <div className="relative z-10 font-['Poppins']">
+                    <p className="text-slate-400 text-[10px] font-semibold uppercase tracking-[0.2em] mb-2 font-semibold">Good morning 👋</p>
+                    <h2 className="text-black text-3xl font-semibold tracking-tight uppercase">{user?.name}</h2>
+                    <div className="flex flex-wrap items-center gap-3 mt-4">
+                        <span className="bg-[#6015C1] text-white text-[10px] font-semibold uppercase tracking-widest px-4 py-1.5 rounded-xl border border-purple-200">Team Alpha</span>
+                        <div className="w-1.5 h-1.5 rounded-full bg-slate-200" />
+                        <span className="text-slate-500 text-[11px] font-semibold uppercase tracking-wider">Project Mentor: Dr. Ramesh V</span>
                     </div>
-                </div>
-                <div className="relative z-10 text-right hidden md:block">
-                    <p className="text-fuchsia-200 text-[10px] uppercase tracking-widest font-semibold">Overall Progress</p>
-                    <p className="text-white text-5xl font-bold mt-1">54%</p>
                 </div>
             </div>
 
@@ -65,7 +82,7 @@ export const Dashboard = () => {
                                 <Ico path={s.icon} size={16} style={{ color: s.color }} />
                             </div>
                             <div>
-                                <p className="text-2xl font-bold text-gray-900 leading-none">{s.value}</p>
+                                <p className="text-2xl font-semibold text-gray-900 leading-none">{s.value}</p>
                                 <p className="text-[11px] text-gray-400 mt-1">{s.label}</p>
                                 {s.sub && <p className="text-[10px] font-semibold mt-1" style={{ color: s.color }}>{s.sub}</p>}
                             </div>
@@ -77,18 +94,32 @@ export const Dashboard = () => {
             {/* Middle row */}
             <div className="grid grid-cols-1 xl:grid-cols-5 gap-5">
                 <Card className="p-6 xl:col-span-3">
-                    <SectionTitle sub="Phase-wise completion">Milestones</SectionTitle>
-                    <div className="space-y-4">
-                        {milestones.map((m, i) => (
-                            <div key={i} className="flex items-center gap-4">
-                                <div className="w-28 text-xs text-gray-500 font-medium flex-shrink-0">{m.label}</div>
-                                <div className="flex-1"><Bar pct={m.pct} color={m.color} /></div>
-                                <span className="w-9 text-right text-xs font-bold" style={{ color: m.pct === 0 ? "#D1D5DB" : m.color }}>{m.pct}%</span>
-                                <div className="w-16">
-                                    <Pill color={m.status === "Done" ? "green" : m.status === "Active" ? "accent" : "gray"}>{m.status}</Pill>
+                    <SectionTitle sub="Evaluation timeline">Upcoming Reviews</SectionTitle>
+                    <div className="space-y-4 mt-6">
+                        {phases.slice(0, 4).map((p, i) => (
+                            <div key={i} className="flex gap-5 p-4 rounded-2xl bg-slate-50 border border-slate-100 hover:bg-white hover:shadow-xl hover:shadow-slate-100 transition-all group">
+                                <div className="flex-shrink-0 flex items-center gap-3 bg-white px-4 py-2.5 rounded-2xl border border-slate-100 shadow-sm relative overflow-hidden">
+                                    <div className="text-center">
+                                        <p className="text-[7px] font-bold text-slate-300 uppercase leading-none mb-1">From</p>
+                                        <p className="text-[12px] font-black text-slate-900 leading-none">{new Date(p.startDate || Date.now()).getDate()}</p>
+                                        <p className="text-[8px] font-bold text-[#6015C1] uppercase mt-1">{new Date(p.startDate || Date.now()).toLocaleString('default', { month: 'short' })}</p>
+                                    </div>
+                                    <div className="w-[1px] h-8 bg-slate-100 mt-2" />
+                                    <div className="text-center">
+                                        <p className="text-[7px] font-bold text-slate-300 uppercase leading-none mb-1">To</p>
+                                        <p className="text-[12px] font-black text-slate-900 leading-none">{new Date(p.endDate || p.startDate || Date.now()).getDate()}</p>
+                                        <p className="text-[8px] font-bold text-[#6015C1] uppercase mt-1">{new Date(p.endDate || p.startDate || Date.now()).toLocaleString('default', { month: 'short' })}</p>
+                                    </div>
+                                </div>
+                                <div className="flex-1 min-w-0 self-center">
+                                    <p className="text-[13px] font-semibold text-slate-800 group-hover:text-[#6015C1] transition-colors truncate">{p.title}</p>
+                                    <p className="text-[10px] text-slate-400 font-semibold uppercase mt-0.5 tracking-wider">{p.venue || "Academic Bloc"}</p>
                                 </div>
                             </div>
                         ))}
+                        {phases.length === 0 && (
+                            <p className="text-[12px] text-slate-400 font-medium">No upcoming reviews</p>
+                        )}
                     </div>
                 </Card>
 
@@ -113,39 +144,7 @@ export const Dashboard = () => {
                 </Card>
             </div>
 
-            {/* Bottom row */}
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
-                <Card className="p-6">
-                    <SectionTitle sub="Latest updates">Recent Activity</SectionTitle>
-                    <div className="space-y-4">
-                        {feed.map((f, i) => (
-                            <div key={i} className="flex items-start gap-3">
-                                <div className="w-2 h-2 rounded-full flex-shrink-0 mt-1.5" style={{ background: f.color }} />
-                                <div>
-                                    <p className="text-[13px] text-gray-700 leading-snug">{f.text}</p>
-                                    <p className="text-[11px] text-gray-400 mt-0.5">{f.time}</p>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </Card>
 
-                <Card className="p-6">
-                    <SectionTitle sub="Alerts & reminders">Notifications</SectionTitle>
-                    <div className="space-y-2.5">
-                        {notifs.map((n, i) => (
-                            <div key={i} className="flex items-start gap-3 p-3.5 rounded-xl"
-                                style={{ background: n.color + "0D", border: `1px solid ${n.color}22` }}>
-                                <div className="w-1.5 h-1.5 rounded-full flex-shrink-0 mt-1.5" style={{ background: n.color }} />
-                                <div>
-                                    <p className="text-[13px] font-semibold text-gray-800">{n.title}</p>
-                                    <p className="text-[11px] text-gray-500 mt-0.5">{n.desc}</p>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </Card>
-            </div>
         </div>
     );
 };
