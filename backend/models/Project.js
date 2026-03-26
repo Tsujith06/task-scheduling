@@ -8,6 +8,7 @@ const projectSchema = new mongoose.Schema({
     abstract: { type: String },
     srsUrl: { type: String },
     rejectionReason: { type: String },
+    approvalDate: { type: Date },
     status: {
         type: String,
         enum: ['Formation', 'MentorSelection', 'ProposalSubmission', 'PendingApproval', 'Approved', 'Rejected'],

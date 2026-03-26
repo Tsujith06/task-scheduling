@@ -6,23 +6,24 @@ const STUDENT_NAV = [
     { id: "team", label: "Team & Project", icon: I.team },
     { id: "tasks", label: "Task Board", icon: I.task },
     { id: "worklog", label: "Worklog", icon: I.clipboard },
-    { id: "reviews", label: "Reviews & Marks", icon: I.star },
+    // { id: "reviews", label: "Reviews & Marks", icon: I.star },
 ];
 
 const ADMIN_NAV = [
+    { id: "dashboard", label: "Dashboard", icon: I.home },
     { id: "users", label: "User Manager", icon: I.users },
     { id: "upload", label: "Bulk Import", icon: I.upload },
-    { id: "phases", label: "Reviews & Marks", icon: I.star },
+    { id: "phase-creation", label: "Phase Setup", icon: I.plus },
+    // { id: "phases", label: "Reviews & Marks", icon: I.star },
     { id: "pool", label: "Project Pool", icon: I.folder },
 ];
 
 const MENTOR_NAV = [
     { id: "dashboard", label: "Dashboard", icon: I.home },
     { id: "mentor-monitoring", label: "Worklog Monitor", icon: I.clipboard },
-    { id: "mentor-reviews", label: "Mark Entry", icon: I.star },
-    { id: "mentor-attendance", label: "Attendance", icon: I.check },
+    // { id: "mentor-reviews", label: "Mark Entry", icon: I.star },
+    // { id: "mentor-attendance", label: "Attendance", icon: I.check },
     { id: "mentor-approvals", label: "Approval Queue", icon: I.folder },
-    { id: "leaves", label: "Leave Requests", icon: I.plus },
 ];
 
 export const Sidebar = ({ role, page, setPage, onLogout }) => {

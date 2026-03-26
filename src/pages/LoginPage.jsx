@@ -52,7 +52,7 @@ export const LoginPage = ({ onLogin }) => {
                 }
             `}</style>
 
-            <div className={`w-full max-w-7xl h-full max-h-[850px] grid grid-cols-1 lg:grid-cols-2 bg-white rounded-[40px] overflow-hidden border border-slate-50 shadow-2xl shadow-slate-100/50 transition-all duration-1000 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'} `}>
+            <div className={`w-full max-w-7xl h-full max-h-[850px] grid grid-cols-1 lg:grid-cols-2 bg-white rounded-[16px] overflow-hidden border border-slate-50 shadow-2xl shadow-slate-100/50 transition-all duration-1000 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'} `}>
 
                 {/* Visual Panel */}
                 <div className="hidden lg:flex items-center justify-center p-16 bg-[#F8F9FB] relative">
@@ -87,7 +87,7 @@ export const LoginPage = ({ onLogin }) => {
                                     value={email}
                                     onChange={e => setEmail(e.target.value)}
                                     placeholder="Enter your Email"
-                                    className="w-full h-14 px-5 bg-slate-50 border border-slate-100 rounded-xl text-sm font-medium text-slate-900 outline-none focus:bg-white focus:border-[#6015C1] focus:ring-4 focus:ring-purple-50 transition-all placeholder:text-slate-300"
+                                    className="w-full h-[44px] px-5 bg-slate-50 border border-slate-100 rounded-[8px] text-sm font-medium text-slate-900 outline-none focus:bg-white focus:border-[#6015C1] focus:ring-4 focus:ring-purple-50 transition-all placeholder:text-slate-300"
                                 />
                             </div>
 
@@ -99,7 +99,7 @@ export const LoginPage = ({ onLogin }) => {
                                         value={pw}
                                         onChange={e => setPw(e.target.value)}
                                         placeholder="Enter your Password"
-                                        className="w-full h-14 px-5 pr-14 bg-slate-50 border border-slate-100 rounded-xl text-sm font-medium text-slate-900 outline-none focus:bg-white focus:border-[#6015C1] focus:ring-4 focus:ring-purple-50 transition-all placeholder:text-slate-300"
+                                        className="w-full h-[44px] px-5 pr-14 bg-slate-50 border border-slate-100 rounded-[8px] text-sm font-medium text-slate-900 outline-none focus:bg-white focus:border-[#6015C1] focus:ring-4 focus:ring-purple-50 transition-all placeholder:text-slate-300"
                                     />
                                     <button
                                         onClick={() => setShowPw(!showPw)}
@@ -111,7 +111,7 @@ export const LoginPage = ({ onLogin }) => {
                             </div>
 
                             {err && (
-                                <div className="p-4 bg-rose-50 border border-rose-100 rounded-xl flex items-center gap-3">
+                                <div className="p-4 bg-rose-50 border border-rose-100 rounded-[12px] flex items-center gap-3">
                                     <Ico path={I.alert} size={16} cls="text-rose-500 flex-shrink-0" />
                                     <p className="text-xs font-semibold text-rose-600">{err}</p>
                                 </div>
@@ -120,7 +120,7 @@ export const LoginPage = ({ onLogin }) => {
                             <Button
                                 onClick={submit}
                                 loading={loading}
-                                className="w-full h-14 bg-[#6015C1] hover:bg-[#4A0D97] text-white rounded-xl font-semibold text-sm tracking-wide transition-all shadow-xl shadow-purple-100 flex items-center justify-center"
+                                className="w-full h-[44px] bg-[#6015C1] hover:bg-[#4A0D97] text-white rounded-[12px] font-semibold text-sm tracking-wide transition-all shadow-xl shadow-purple-100 flex items-center justify-center"
                             >
                                 {loading ? "Verifying..." : "Sign In"}
                             </Button>

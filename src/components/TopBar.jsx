@@ -38,6 +38,7 @@ export const TopBar = ({ page, user, notifCount, setPage }) => {
         assignments: "Task Management Portal",
         worklog: "Worklog & Progress",
         reviews: "Academic Reviews",
+        'review-details': "Review Assessment Details",
     };
 
     const totalNotifs = notifCount + invitations.length;

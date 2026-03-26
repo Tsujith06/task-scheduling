@@ -19,15 +19,17 @@ router.get('/', async (req, res) => {
 
         // Check if students are already in a team
         if (role === 'Student' || !role) {
-            const teamMembers = await Project.find({}, { "members.sid": 1 });
-            const sidsInTeams = new Set();
+            const teamMembers = await Project.find({}, { "members.email": 1 });
+            const emailsInTeams = new Set();
             teamMembers.forEach(p => {
-                p.members.forEach(m => sidsInTeams.add(m.sid));
+                p.members.forEach(m => {
+                    if (m && m.email) emailsInTeams.add(m.email);
+                });
             });
 
             users = users.map(u => ({
                 ...u,
-                hasTeam: u.role === 'Student' ? sidsInTeams.has(u.sid) : false
+                hasTeam: (u.role === 'Student' && u.email) ? emailsInTeams.has(u.email) : false
             }));
         }
 

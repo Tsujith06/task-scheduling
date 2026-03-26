@@ -1,180 +1,243 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Ico, I } from "../components/Icons";
 import { Card, SectionTitle, Pill } from "../components/SharedComponents";
+import { getUsers, getTasks, getProjects, getPhases } from "../api";
 
-// Helper for Circular Progress
-const CircularStat = ({ val, label, sub, color, bg, icon }) => {
-    const radius = 34;
-    const circ = 2 * Math.PI * radius;
-    const pct = (val / 300) * 100; // Normalized for demo
-    const offset = circ - (pct / 100) * circ;
-
-    return (
-        <Card className="p-6 flex items-center justify-between group overflow-hidden relative">
-            <div className="flex gap-4 items-center">
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${bg} shadow-sm group-hover:scale-110 transition-transform`}>
-                    <Ico path={icon} size={20} style={{ color }} />
-                </div>
-                <div>
-                    <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 mb-1">{label}</p>
-                    <p className="text-sm font-semibold text-slate-900 group-hover:text-slate-700">{sub}</p>
-                </div>
+const StatCard = ({ val, label, sub, color, bg, icon, onClick }) => (
+    <Card
+        className={`p-5 transition-all duration-300 ${onClick ? 'cursor-pointer hover:shadow-lg hover:-translate-y-0.5' : ''}`}
+        onClick={onClick}
+    >
+        <div className="flex items-start gap-4">
+            <div className="w-11 h-11 rounded-[14px] flex items-center justify-center flex-shrink-0 shadow-sm" style={{ background: bg }}>
+                <Ico path={icon} size={19} style={{ color }} />
             </div>
-
-            <div className="relative flex items-center justify-center">
-                <svg className="w-20 h-20 -rotate-90">
-                    <circle cx="40" cy="40" r={radius} stroke="currentColor" strokeWidth="6" fill="transparent" className="text-slate-50" />
-                    <circle cx="40" cy="40" r={radius} stroke={color} strokeWidth="6" fill="transparent"
-                        strokeDasharray={circ} strokeDashoffset={offset} strokeLinecap="round" className="transition-all duration-1000 ease-out" />
-                </svg>
-                <span className="absolute text-[13px] font-semibold text-slate-800">{val}</span>
+            <div className="flex-1 min-w-0">
+                <p className="text-2xl font-bold text-slate-900 leading-none">{val}</p>
+                <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mt-1.5">{label}</p>
+                {sub && <p className="text-[10px] font-bold mt-1.5" style={{ color }}>{sub}</p>}
             </div>
-        </Card>
-    );
-};
+        </div>
+    </Card>
+);
 
-export const AdminDashboard = () => {
-    const reviewStats = [
-        { label: "Approved", val: 250, sub: "250 approved", color: "#10B981", bg: "bg-emerald-50", icon: I.check },
-        { label: "Rejected", val: 150, sub: "150 rejected", color: "#F43F5E", bg: "bg-rose-50", icon: I.plus }, // Using plus as cross
-        { label: "Not Registered", val: 300, sub: "300 not registered", color: "#8B5CF6", bg: "bg-fuchsia-50", icon: I.people },
-        { label: "Pending", val: 200, sub: "200 pending", color: "#F59E0B", bg: "bg-amber-50", icon: I.dots },
+const QuickActionBtn = ({ label, icon, color, bg, onClick }) => (
+    <button
+        onClick={onClick}
+        className="flex items-center gap-3 p-4 rounded-[14px] border border-slate-100 bg-white hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 w-full text-left group"
+    >
+        <div className="w-9 h-9 rounded-[10px] flex items-center justify-center flex-shrink-0" style={{ background: bg }}>
+            <Ico path={icon} size={16} style={{ color }} />
+        </div>
+        <span className="text-[13px] font-semibold text-slate-700 group-hover:text-slate-900">{label}</span>
+        <Ico path={I.arrow} size={14} cls="ml-auto text-slate-300 group-hover:text-slate-500 group-hover:translate-x-0.5 transition-all" />
+    </button>
+);
+
+export const AdminDashboard = ({ setPage, user }) => {
+    const [stats, setStats] = useState({ students: 0, mentors: 0, teams: 0, phases: 0 });
+    const [tasks, setTasks] = useState([]);
+    const [projects, setProjects] = useState([]);
+    const [phases, setPhases] = useState([]);
+
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchAll = async () => {
+            try {
+                const [studRes, mentRes, projRes, phaseRes, taskRes, leaveRes] = await Promise.allSettled([
+                    getUsers({ role: 'Student' }),
+                    getUsers({ role: 'Mentor' }),
+                    getProjects(),
+                    getPhases(),
+                    getTasks(),
+                ]);
+
+                const students = studRes.status === 'fulfilled' ? studRes.value.data : [];
+                const mentors = mentRes.status === 'fulfilled' ? mentRes.value.data : [];
+                const projs = projRes.status === 'fulfilled' ? projRes.value.data : [];
+                const phs = phaseRes.status === 'fulfilled' ? phaseRes.value.data : [];
+                const tsks = taskRes.status === 'fulfilled' ? taskRes.value.data : [];
+
+                setStats({
+                    students: students.length,
+                    mentors: mentors.length,
+                    teams: projs.length,
+                    phases: phs.length,
+                });
+                setProjects(projs);
+                setPhases(phs);
+                setTasks(tsks);
+
+            } catch (err) {
+                console.error("Dashboard fetch error:", err);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchAll();
+    }, []);
+
+    // Task breakdown
+    const taskTodo = tasks.filter(t => t.status === 'To Do').length;
+    const taskInProgress = tasks.filter(t => t.status === 'In Progress').length;
+    const taskCompleted = tasks.filter(t => t.status === 'Completed').length;
+    const taskMentorApproval = tasks.filter(t => t.status === 'Mentor Approval').length;
+    const totalTasks = tasks.length || 1;
+
+    // Project funnel
+    const proposalPending = projects.filter(p => p.proposalStatus === 'Pending').length;
+    const proposalApproved = projects.filter(p => p.proposalStatus === 'Approved').length;
+    const proposalRejected = projects.filter(p => p.proposalStatus === 'Rejected').length;
+    const noProposal = projects.filter(p => !p.proposalStatus || p.proposalStatus === 'Not Submitted').length;
+
+    const activePhases = phases.filter(ph => ph.status === 'Active');
+    const upcomingPhases = phases.filter(ph => ph.status === 'Upcoming');
+
+    const taskBars = [
+        { label: "To Do", val: taskTodo, color: "#64748b", bg: "#f1f5f9" },
+        { label: "In Progress", val: taskInProgress, color: "#6015C1", bg: "#f5f3ff" },
+        { label: "Mentor Approval", val: taskMentorApproval, color: "#F59E0B", bg: "#fffbeb" },
+        { label: "Completed", val: taskCompleted, color: "#10B981", bg: "#ecfdf5" },
     ];
+    const maxBar = Math.max(...taskBars.map(b => b.val), 1);
 
-    const chartData = [
-        { label: "Approved", val: 1600 },
-        { label: "rejected", val: 850 },
-        { label: "pending", val: 900 },
-        { label: "not registered", val: 410 },
-        { label: "challenge", val: 800 },
-        { label: "Optional", val: 450 },
-        { label: "Present", val: 1300 },
-        { label: "Absent", val: 700 }
-    ];
-
-    const calendarGrid = Array.from({ length: 31 }, (_, i) => i + 1);
+    const now = new Date();
 
     return (
         <div className="p-7 space-y-6 max-w-7xl mx-auto">
-            {/* Header section (Review Details) */}
-            <div className="space-y-4">
-                <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-[0.2em] mb-4">Review Details</p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-                    {reviewStats.map((s, i) => (
-                        <CircularStat key={i} {...s} />
-                    ))}
+            {/* Header */}
+            <div className="py-4 flex items-center justify-between">
+                <div className="relative z-10 font-['Poppins']">
+                    <p className="text-slate-400 text-[10px] font-semibold uppercase tracking-[0.2em] mb-2">Good morning 👋</p>
+                    <h2 className="text-black text-3xl font-semibold tracking-tight uppercase">Admin Dashboard</h2>
+                </div>
+                <div className="text-right">
+                    <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest">{now.toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</p>
+                    <p className="text-[10px] font-bold text-[#6015C1] mt-1 uppercase tracking-wider">System Overview</p>
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* Status of Reviews Chart */}
-                <Card className="lg:col-span-2 p-8">
-                    <div className="flex justify-between items-center mb-10">
-                        <SectionTitle sub="">Status of Reviews</SectionTitle>
-                        <select className="px-4 py-2 bg-slate-50 border border-slate-100 rounded-xl text-[12px] font-semibold text-slate-600 outline-none focus:ring-2 focus:ring-fuchsia-100 appearance-none pr-10 relative">
-                            <option>Approval Review</option>
-                        </select>
-                    </div>
+            {/* Row 1 — 4 Stat Cards */}
+            <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
+                <StatCard val={loading ? '—' : stats.students} label="Total Students" sub="Registered accounts" color="#6015C1" bg="#F5F3FF" icon={I.people} onClick={() => setPage('users')} />
+                <StatCard val={loading ? '—' : stats.mentors} label="Total Mentors" sub="Active faculty" color="#3B82F6" bg="#EFF6FF" icon={I.award} onClick={() => setPage('users')} />
+                <StatCard val={loading ? '—' : stats.teams} label="Active Teams" sub="Project groups" color="#10B981" bg="#ECFDF5" icon={I.chart} onClick={() => setPage('pool')} />
+                <StatCard val={loading ? '—' : stats.phases} label="Total Phases" sub={`${activePhases.length} active`} color="#F59E0B" bg="#FFFBEB" icon={I.task} onClick={() => setPage('phase-creation')} />
+            </div>
 
-                    <div className="h-[300px] flex items-end justify-between gap-2 px-4 relative mt-12 pb-8">
-                        {/* Grid lines */}
-                        <div className="absolute inset-0 flex flex-col justify-between pointer-events-none pb-12">
-                            {[2000, 1600, 1200, 800, 400, 0].map(y => (
-                                <div key={y} className="flex items-center gap-4">
-                                    <span className="text-[10px] font-semibold text-slate-300 w-8 text-right">{y}</span>
-                                    <div className="flex-1 h-px bg-slate-100" />
+            {/* Row 2 — Task Breakdown + Proposal Status */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Task Status Chart — 2 cols */}
+                <Card className="lg:col-span-2 p-7">
+                    <div className="flex justify-between items-center mb-6">
+                        <SectionTitle sub={`${tasks.length} tasks across all teams`}>Task Status Breakdown</SectionTitle>
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100">Live</span>
+                    </div>
+                    {loading ? (
+                        <div className="space-y-4">
+                            {[1, 2, 3, 4].map(i => <div key={i} className="h-10 bg-slate-50 rounded-xl animate-pulse" />)}
+                        </div>
+                    ) : (
+                        <div className="space-y-5">
+                            {taskBars.map((b, i) => (
+                                <div key={i}>
+                                    <div className="flex items-center justify-between mb-2">
+                                        <span className="text-[13px] font-semibold text-slate-600">{b.label}</span>
+                                        <span className="text-[13px] font-bold" style={{ color: b.color }}>{b.val} tasks</span>
+                                    </div>
+                                    <div className="h-2.5 w-full bg-slate-100 rounded-full overflow-hidden">
+                                        <div className="h-full rounded-full transition-all duration-1000 ease-out"
+                                            style={{ width: `${(b.val / maxBar) * 100}%`, backgroundColor: b.color }} />
+                                    </div>
                                 </div>
                             ))}
                         </div>
-
-                        {/* Bars */}
-                        {chartData.map((d, i) => (
-                            <div key={i} className="relative flex flex-col items-center flex-1 group z-10">
-                                <span className="absolute -top-10 text-[11px] font-semibold text-blue-600 opacity-0 group-hover:opacity-100 transition-opacity bg-blue-50 px-2 py-1 rounded-lg border border-blue-100">{d.val}</span>
-                                <div className="w-full max-w-[40px] bg-blue-500 rounded-t-lg transition-all duration-1000 ease-out hover:bg-blue-600 hover:scale-x-105 origin-bottom relative"
-                                    style={{ height: `${(d.val / 2000) * 260}px` }}>
-                                    <div className="absolute inset-0 flex items-center justify-center rotate-[-90deg]">
-                                        <span className="text-[10px] font-semibold text-white/40 drop-shadow-sm">{d.val}</span>
-                                    </div>
-                                </div>
-                                <span className="text-[10px] font-semibold text-slate-400 mt-4 uppercase rotate-[-25deg] origin-top whitespace-nowrap">{d.label}</span>
+                    )}
+                    <div className="mt-6 pt-5 border-t border-slate-50 grid grid-cols-2 sm:grid-cols-4 gap-3">
+                        {taskBars.map((b, i) => (
+                            <div key={i} className="flex items-center gap-2">
+                                <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: b.color }} />
+                                <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">{b.label}</span>
                             </div>
                         ))}
-
-                        <div className="absolute -left-12 bottom-1/2 -rotate-90 text-[11px] font-semibold text-slate-300 uppercase tracking-widest">
-                            no of students
-                        </div>
                     </div>
                 </Card>
 
-                {/* Sidebar controls */}
-                <div className="space-y-6">
-                    <Card className="p-8 space-y-7">
-                        {/* Semester Select */}
-                        <div className="relative">
-                            <select className="w-full px-5 py-3.5 bg-slate-50 border border-slate-100 rounded-2xl text-[13px] font-semibold text-gray-700 outline-none appearance-none">
-                                <option>Semester 5</option>
-                            </select>
-                            <div className="absolute right-5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
-                                <Ico path={I.arrow} size={14} style={{ transform: 'rotate(90deg)' }} />
-                            </div>
-                        </div>
-
-                        {/* Mock Calendar */}
-                        <div className="space-y-4">
-                            <div className="flex justify-between items-center px-1">
-                                <p className="text-[14px] font-semibold text-slate-900">March 2020</p>
-                                <div className="flex gap-2">
-                                    <button className="p-1 text-slate-400 hover:text-slate-800 transition-colors"><Ico path={I.arrow} size={14} style={{ transform: 'rotate(180deg)' }} /></button>
-                                    <button className="p-1 text-slate-400 hover:text-slate-800 transition-colors"><Ico path={I.arrow} size={14} /></button>
+                {/* Proposal Status — 1 col */}
+                <Card className="p-7">
+                    <SectionTitle sub={`${projects.length} total teams registered`}>Proposal Status</SectionTitle>
+                    {loading ? (
+                        <div className="space-y-3 mt-4">{[1,2,3,4].map(i => <div key={i} className="h-8 bg-slate-50 rounded-xl animate-pulse" />)}</div>
+                    ) : (
+                        <div className="mt-5 space-y-3">
+                            {[
+                                { label: "Approved", val: proposalApproved, color: "#10B981", bg: "#ECFDF5" },
+                                { label: "Pending Review", val: proposalPending, color: "#F59E0B", bg: "#FFFBEB" },
+                                { label: "Rejected", val: proposalRejected, color: "#F43F5E", bg: "#FFF1F2" },
+                                { label: "Not Submitted", val: noProposal, color: "#64748b", bg: "#F8FAFC" },
+                            ].map((item, i) => (
+                                <div key={i} className="flex items-center justify-between p-3 rounded-[12px]" style={{ background: item.bg }}>
+                                    <div className="flex items-center gap-2.5">
+                                        <div className="w-2 h-2 rounded-full" style={{ backgroundColor: item.color }} />
+                                        <span className="text-[13px] font-semibold text-slate-700">{item.label}</span>
+                                    </div>
+                                    <span className="text-[14px] font-bold" style={{ color: item.color }}>{item.val}</span>
                                 </div>
-                            </div>
-                            <div className="grid grid-cols-7 gap-1 text-center">
-                                {['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'].map(d => (
-                                    <span key={d} className="text-[10px] font-semibold text-slate-300 uppercase py-2">{d}</span>
-                                ))}
-                                {Array.from({ length: 4 }).map((_, i) => <span key={`empty-${i}`} />)}
-                                {calendarGrid.map(d => (
-                                    <button key={d} className={`text-[12px] font-semibold py-2.5 rounded-xl transition-all ${d === 13 ? 'bg-blue-600 text-white shadow-lg shadow-blue-100 scale-110' : 'text-slate-600 hover:bg-slate-50'}`}>
-                                        {d}
-                                    </button>
-                                ))}
-                            </div>
+                            ))}
                         </div>
+                    )}
+                </Card>
+            </div>
 
-                        {/* Secondary Filter */}
-                        <div className="flex gap-3">
-                            <div className="flex-1 relative">
-                                <select className="w-full px-5 py-3.5 bg-slate-50 border border-slate-100 rounded-2xl text-[12px] font-semibold text-gray-700 outline-none appearance-none">
-                                    <option>Approval Review</option>
-                                </select>
-                            </div>
-                            <button className="p-4 rounded-2xl bg-white border border-slate-200 text-slate-400 hover:text-blue-600 transition-all shadow-sm">
-                                <Ico path={I.edit} size={16} />
+            {/* Row 3 — Phase Timeline + Quick Actions */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Phase Timeline — 2 cols */}
+                <Card className="lg:col-span-2 p-7">
+                    <div className="flex justify-between items-center mb-5">
+                        <SectionTitle sub={`${upcomingPhases.length} upcoming · ${activePhases.length} active`}>Phase Timeline</SectionTitle>
+                        {phases.length > 0 && (
+                            <button onClick={() => setPage('phase-creation')} className="text-[11px] font-bold uppercase tracking-widest text-[#6015C1] bg-fuchsia-50 px-4 py-2 rounded-[10px] hover:bg-fuchsia-100 transition-all">
+                                Manage All →
                             </button>
-                        </div>
+                        )}
+                    </div>
+                    <div className="space-y-3">
+                        {loading ? (
+                            [1, 2, 3].map(i => <div key={i} className="h-16 bg-slate-50 rounded-xl animate-pulse" />)
+                        ) : phases.length === 0 ? (
+                            <p className="text-[13px] text-slate-400 font-medium py-6 text-center">No phases created yet</p>
+                        ) : phases.map((p, i) => {
+                            const fmt = (d) => d ? new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: '2-digit' }) : '—';
+                            return (
+                                <div key={i} className="flex items-center gap-4 p-3 rounded-[12px] bg-slate-50 border border-slate-100">
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-[13px] font-bold text-slate-800 truncate">{p.title}</p>
+                                        <div className="flex items-center gap-1.5 mt-1">
+                                            <span className="text-[13px] font-semibold text-slate-500">{fmt(p.startDate)}</span>
+                                            <span className="text-[13px] text-slate-300 font-bold">→</span>
+                                            <span className="text-[13px] font-semibold text-slate-500">{fmt(p.endDate)}</span>
+                                        </div>
+                                    </div>
+                                    <Pill color={p.status === 'Active' ? 'green' : p.status === 'Completed' ? 'gray' : 'accent'}>{p.status}</Pill>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </Card>
 
-                        {/* Date Range info */}
-                        <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-50">
-                            <div className="flex items-start gap-3">
-                                <div className="p-2 rounded-xl bg-blue-50 text-blue-600"><Ico path={I.clock} size={20} /></div>
-                                <div>
-                                    <p className="text-[9px] font-semibold text-blue-400 tracking-widest uppercase mb-0.5">From Date</p>
-                                    <p className="text-[12px] font-semibold text-slate-800">13 MAR 2024</p>
-                                </div>
-                            </div>
-                            <div className="flex items-start gap-3 border-l border-slate-100 pl-3">
-                                <div className="p-2 rounded-xl bg-slate-50 text-slate-400 opacity-60"><Ico path={I.clock} size={20} /></div>
-                                <div>
-                                    <p className="text-[9px] font-semibold text-slate-400 tracking-widest uppercase mb-0.5 opacity-60">To Date</p>
-                                    <p className="text-[12px] font-semibold text-slate-800 opacity-60">14 MAR 2024</p>
-                                </div>
-                            </div>
-                        </div>
-                    </Card>
-                </div>
+                {/* Quick Actions — 1 col */}
+                <Card className="p-7">
+                    <SectionTitle sub="Jump to key modules">Quick Actions</SectionTitle>
+                    <div className="mt-4 space-y-2">
+                        <QuickActionBtn label="Manage Users" icon={I.people} color="#6015C1" bg="#F5F3FF" onClick={() => setPage('users')} />
+                        <QuickActionBtn label="Bulk Upload Data" icon={I.upload} color="#3B82F6" bg="#EFF6FF" onClick={() => setPage('upload')} />
+                        <QuickActionBtn label="Phase & Timeline" icon={I.task} color="#F59E0B" bg="#FFFBEB" onClick={() => setPage('phase-creation')} />
+                        <QuickActionBtn label="Project Pool" icon={I.chart} color="#10B981" bg="#ECFDF5" onClick={() => setPage('pool')} />
+                        <QuickActionBtn label="Reports & Approvals" icon={I.file} color="#F43F5E" bg="#FFF1F2" onClick={() => setPage('reports')} />
+                    </div>
+                </Card>
             </div>
         </div>
     );
 };
-

@@ -18,7 +18,7 @@ router.post('/', async (req, res) => {
         if (!invitedUser) return res.status(404).json({ message: 'User not found' });
 
         // Check if user already in team members list
-        const isMember = project.members.some(m => m.sid === invitedUser.sid);
+        const isMember = project.members.some(m => m.email === invitedUser.email);
         if (isMember) return res.status(400).json({ message: 'User is already a member of this team' });
 
         // Check for existing pending invitation
@@ -104,7 +104,7 @@ router.put('/:id/respond', async (req, res) => {
 
             if (project && user) {
                 // Add to project members if not already there
-                const isMember = project.members.some(m => m.sid === user.sid);
+                const isMember = project.members.some(m => m.email === user.email);
                 if (!isMember) {
                     project.members.push({
                         name: user.name,

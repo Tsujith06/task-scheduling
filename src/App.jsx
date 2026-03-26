@@ -13,8 +13,10 @@ import { ReviewsMarks } from "./pages/ReviewsMarks";
 import { AdminDashboard } from "./pages/AdminDashboard";
 import { UserManagement } from "./pages/UserManagement";
 import { BulkUpload } from "./pages/BulkUpload";
+import { AdminPhaseCreation } from "./pages/AdminPhaseCreation";
 
 import { ReviewManagement } from "./pages/ReviewManagement";
+import { ReviewDetailsView } from "./pages/ReviewDetailsView";
 import { AdminReports } from "./pages/AdminReports";
 import { ProjectPoolManager } from "./pages/ProjectPoolManager";
 import { AdminSettings } from "./pages/AdminSettings";
@@ -23,7 +25,6 @@ import { MentorDashboard } from "./pages/MentorDashboard";
 import { MentorTaskMonitoring } from "./pages/MentorTaskMonitoring";
 import { MentorReviewEntry } from "./pages/MentorReviewEntry";
 import { MentorAttendance } from "./pages/MentorAttendance";
-import { MentorLeaves } from "./pages/MentorLeaves";
 import { MentorApproval } from "./pages/MentorApproval";
 import { getTasks } from "./api";
 
@@ -40,11 +41,12 @@ export default function App() {
     const parsedUser = savedUser ? JSON.parse(savedUser) : null;
 
     if (parsedUser?.role === 'Admin' && (!defaultPage || defaultPage === 'dashboard')) {
-      return "users";
+      return "dashboard";
     }
 
     return defaultPage || "dashboard";
   });
+  const [selectedReview, setSelectedReview] = useState(null);
   const [notifCount, setNotifCount] = useState(0);
 
   useEffect(() => {
@@ -88,9 +90,12 @@ export default function App() {
   };
 
   const ADMIN_PAGES = {
+    dashboard: <AdminDashboard setPage={setPage} user={user} />,
     users: <UserManagement user={user} />,
     upload: <BulkUpload user={user} />,
-    phases: <ReviewManagement user={user} />,
+    "phase-creation": <AdminPhaseCreation user={user} />,
+    // phases: <ReviewManagement user={user} setPage={setPage} setSelectedReview={setSelectedReview} />,
+    // 'review-details': <ReviewDetailsView review={selectedReview} setPage={setPage} user={user} />,
     reports: <AdminReports user={user} />,
     pool: <ProjectPoolManager user={user} />,
     settings: <AdminSettings user={user} />,
@@ -101,10 +106,9 @@ export default function App() {
   const MENTOR_PAGES = {
     dashboard: <MentorDashboard user={user} />,
     "mentor-monitoring": <MentorTaskMonitoring user={user} />,
-    "mentor-reviews": <MentorReviewEntry user={user} />,
-    "mentor-attendance": <MentorAttendance user={user} />,
+    // "mentor-reviews": <MentorReviewEntry user={user} />,
+    // "mentor-attendance": <MentorAttendance user={user} />,
     "mentor-approvals": <MentorApproval user={user} />,
-    leaves: <MentorLeaves user={user} />,
   };
 
   if (!user) return <LoginPage onLogin={(userData) => {

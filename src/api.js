@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-    baseURL: 'http://localhost:5000/api',
+    baseURL: import.meta.env.VITE_API_URL || '/api',
 });
 
 // Tasks
@@ -38,6 +38,7 @@ export const getPhases = () => api.get('/phases');
 export const createPhase = (data) => api.post('/phases', data);
 export const updatePhase = (id, data) => api.put(`/phases/${id}`, data);
 export const deletePhase = (id) => api.delete(`/phases/${id}`);
+export const startPhase = (id) => api.put(`/phases/${id}/start`);
 
 // Leaves
 export const getLeaves = () => api.get('/leaves');
@@ -60,11 +61,15 @@ export const getProjectPool = () => api.get('/project-pool');
 export const addProjectPool = (data) => api.post('/project-pool', data);
 export const updateProjectPool = (id, data) => api.put(`/project-pool/${id}`, data);
 export const deleteProjectPool = (id) => api.delete(`/project-pool/${id}`);
+export const bulkProjectPool = (titles) => api.post('/project-pool/bulk', { titles });
 
 // Team Flow
 export const createTeam = (data) => api.post('/projects/formation', data);
 export const selectMentor = (id, data) => api.put(`/projects/${id}/select-mentor`, data);
 export const submitProposal = (id, data) => api.put(`/projects/${id}/submit-proposal`, data);
 export const reviewProposal = (id, data) => api.put(`/projects/${id}/review`, data);
+export const removeMembers = (id, sids) => api.put(`/projects/${id}/members/remove-bulk`, { sids });
+export const addMember = (id, userId) => api.put(`/projects/${id}/members/add`, { userId });
+export const changeProjectTitle = (id, title) => api.put(`/projects/${id}/change-title`, { title });
 
 export default api;

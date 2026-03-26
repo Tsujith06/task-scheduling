@@ -7,9 +7,9 @@ const userSchema = new mongoose.Schema({
     sid: { type: String }, // General ID (Reg No or Emp ID)
     dept: { type: String },
     team: { type: String },
-    role: { type: String, enum: ['Student', 'Mentor', 'Admin'], default: 'Student' },
+    role: { type: String, enum: ['Student', 'Mentor', 'Admin', 'Team Lead'], default: 'Student' },
     contact: { type: String },
-    status: { type: String, enum: ['Active', 'Inactive'], default: 'Active' },
+    status: { type: String, enum: ['Active', 'Inactive', 'On Leave', 'OD'], default: 'Active' },
     avatar: { type: String },
     lastLogin: { type: Date }
 });

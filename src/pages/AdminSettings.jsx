@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Card, SectionTitle } from "../components/SharedComponents";
 import { getSettings, updateSettings } from "../api";
 
-export const AdminSettings = () => {
+export const AdminSettings = ({ user }) => {
     const [settings, setSettings] = useState({
         maxTeamSize: 4,
         teamDeadline: '',
@@ -40,9 +40,14 @@ export const AdminSettings = () => {
     };
 
     return (
-        <div className="p-7 max-w-2xl mx-auto font-['Poppins']">
-            <h1 className="text-2xl font-bold text-slate-800 mb-2">Portal Settings</h1>
-            <p className="text-sm text-slate-400 mb-8">Configure deadlines, team sizes, and mentor caps</p>
+        <div className="p-7 max-w-7xl mx-auto font-['Poppins']">
+            {/* Hero header */}
+            <div className="py-4 flex items-center justify-between mb-8">
+                <div className="relative z-10 font-['Poppins']">
+                    <p className="text-slate-400 text-[10px] font-semibold uppercase tracking-[0.2em] mb-2 font-semibold">Good morning 👋</p>
+                    <h2 className="text-black text-3xl font-semibold tracking-tight uppercase">Settings</h2>
+                </div>
+            </div>
 
             <Card className="p-8 space-y-8 border-none shadow-sm">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

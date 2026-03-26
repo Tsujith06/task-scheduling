@@ -61,9 +61,32 @@ async function seed() {
 
         // 2. Phases
         const phases = [
-            { title: "Review 1: Concept", startDate: new Date("2024-12-01"), endDate: new Date("2024-12-05"), type: "Offline", maxMarks: 50, weightage: 10, status: "Completed", venue: "Seminar Hall" },
-            { title: "Review 2: Alpha", startDate: new Date("2025-03-25"), endDate: new Date("2025-03-30"), type: "Offline", maxMarks: 100, weightage: 30, status: "Upcoming", venue: "Main Lab" },
-            { title: "Internal Review", startDate: new Date("2025-04-10"), endDate: new Date("2025-04-12"), type: "Online", maxMarks: 50, weightage: 15, status: "Upcoming", venue: "Zoom" }
+            { 
+                title: "Semester VI Project Phases", 
+                status: "Ongoing",
+                reviews: [
+                    { 
+                        title: "Review 1: Conceptual Design", 
+                        startDate: new Date("2024-12-01"), 
+                        endDate: new Date("2024-12-05"), 
+                        maxMarks: 50,
+                        rubrics: [
+                            { title: "Literature Survey", description: "Relevance of sources", maxMarks: 25 },
+                            { title: "Forming Objectives", description: "Clarity of goals", maxMarks: 25 }
+                        ]
+                    },
+                    { 
+                        title: "Review 2: Prototype Architecture", 
+                        startDate: new Date("2025-03-25"), 
+                        endDate: new Date("2025-03-30"), 
+                        maxMarks: 100,
+                        rubrics: [
+                            { title: "Technical Architecture", description: "System design clarity", maxMarks: 50 },
+                            { title: "Tool Selection", description: "Modern tool usage", maxMarks: 50 }
+                        ]
+                    }
+                ]
+            }
         ];
         await ReviewPhase.insertMany(phases);
 

@@ -8,8 +8,9 @@ export const MentorReviewEntry = () => {
     const [phases, setPhases] = useState([]);
     const [teams, setTeams] = useState([]);
     const [activePhase, setActivePhase] = useState(null);
+    const [activeReview, setActiveReview] = useState(null);
     const [evalTeam, setEvalTeam] = useState(null); // team object for modal
-    const [marks, setMarks] = useState({ lit: 0, comp: 0 });
+    const [marks, setMarks] = useState({}); // Stores rubric index: score
     const [feedback, setFeedback] = useState("");
 
     const fetchAll = async () => {
@@ -17,13 +18,29 @@ export const MentorReviewEntry = () => {
             const [pRes, tRes] = await Promise.all([getPhases(), getAllProjects()]);
             setPhases(pRes.data);
             setTeams(tRes.data);
-            if (pRes.data.length > 0) setActivePhase(pRes.data[0]);
+            if (pRes.data.length > 0) {
+                const firstPhase = pRes.data[0];
+                setActivePhase(firstPhase);
+                if (firstPhase.reviews?.length > 0) {
+                    setActiveReview(firstPhase.reviews[0]);
+                }
+            }
         } catch (err) { console.error(err); }
     };
 
     useEffect(() => {
         fetchAll();
     }, []);
+
+    const handlePhaseChange = (id) => {
+        const ph = phases.find(p => p._id === id);
+        setActivePhase(ph);
+        if (ph?.reviews?.length > 0) {
+            setActiveReview(ph.reviews[0]);
+        } else {
+            setActiveReview(null);
+        }
+    };
 
     const handleToggleAttendance = async (projectId, sid, currentStatus, name, memberId) => {
         const nextStatus = currentStatus === "Present" ? "Absent" : "Present";
@@ -33,40 +50,54 @@ export const MentorReviewEntry = () => {
         } catch (err) { console.error(err); }
     };
 
-    const total = Object.values(marks).reduce((a, b) => Number(a) + Number(b), 0);
+    const totalCalculated = Object.values(marks).reduce((a, b) => Number(a) + Number(b), 0);
 
     return (
-        <div className="p-7 space-y-6 max-w-7xl mx-auto">
-            <div className="py-4 flex items-center justify-between">
+        <div className="p-7 space-y-6 max-w-7xl mx-auto font-inter">
+            <div className="py-4 flex flex-col md:flex-row md:items-center justify-between gap-6">
                 <div>
-                    <p className="text-slate-400 text-[10px] font-semibold uppercase tracking-[0.2em] mb-2">Evaluation Protocol 📑</p>
-                    <h2 className="text-black text-3xl font-semibold tracking-tight">Mark Submission</h2>
-                    <div className="flex flex-wrap items-center gap-3 mt-4">
+                    <p className="text-slate-400 text-[10px] font-bold uppercase tracking-[0.2em] mb-2">Evaluation Suite 📊</p>
+                    <h2 className="text-slate-900 text-3xl font-black tracking-tight">Academic Assessment</h2>
+                </div>
+                
+                <div className="flex gap-4">
+                    <div className="space-y-1.5">
+                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest ml-1">Select Phase</p>
                         <select
-                            className="bg-fuchsia-50 text-[#6015C1] text-[11px] font-semibold uppercase tracking-widest px-4 py-2 rounded-xl border border-fuchsia-100 outline-none cursor-pointer"
-                            onChange={e => setActivePhase(phases.find(p => p._id === e.target.value))}
+                            className="bg-white text-slate-900 text-[12px] font-bold px-5 py-3 rounded-2xl border border-slate-100 outline-none cursor-pointer shadow-sm min-w-[200px]"
+                            value={activePhase?._id || ""}
+                            onChange={e => handlePhaseChange(e.target.value)}
                         >
                             {phases.map(p => <option key={p._id} value={p._id}>{p.title}</option>)}
                         </select>
-                        <div className="w-1.5 h-1.5 rounded-full bg-slate-200" />
-                        <span className="text-slate-500 text-[11px] font-semibold uppercase tracking-wider">Weightage: {activePhase?.weightage}%</span>
+                    </div>
+
+                    <div className="space-y-1.5">
+                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest ml-1">Review Session</p>
+                        <select
+                            disabled={!activePhase?.reviews?.length}
+                            className="bg-fuchsia-50 text-[#6015C1] text-[12px] font-bold px-5 py-3 rounded-2xl border border-fuchsia-100 outline-none cursor-pointer shadow-sm min-w-[200px]"
+                            value={activeReview?.title || ""}
+                            onChange={e => setActiveReview(activePhase.reviews.find(r => r.title === e.target.value))}
+                        >
+                            {!activePhase?.reviews?.length && <option>No Reviews Configured</option>}
+                            {activePhase?.reviews?.map((r, i) => <option key={i} value={r.title}>{r.title}</option>)}
+                        </select>
                     </div>
                 </div>
             </div>
 
-            <Card className="overflow-hidden border-none shadow-[0_8px_30px_rgb(0,0,0,0.03)]">
+            <Card className="overflow-hidden border-none shadow-[0_8px_40px_rgba(0,0,0,0.03)] bg-white rounded-[32px]">
                 <div className="overflow-x-auto">
                     <table className="w-full border-collapse">
                         <thead>
-                            <tr className="border-b border-gray-100 bg-slate-50/50">
-                                <th className="px-6 py-5 text-left text-xs font-semibold text-slate-400 uppercase tracking-[0.15em] border-r border-gray-100">Project name</th>
-                                <th className="px-6 py-5 text-left text-xs font-semibold text-slate-400 uppercase tracking-[0.15em] border-r border-gray-100">S.no</th>
-                                <th className="px-6 py-5 text-left text-xs font-semibold text-slate-400 uppercase tracking-[0.15em] border-r border-gray-100">Name</th>
-                                <th className="px-6 py-5 text-left text-xs font-semibold text-slate-400 uppercase tracking-[0.15em] border-r border-gray-100">Roll no</th>
-                                <th className="px-6 py-5 text-left text-xs font-semibold text-slate-400 uppercase tracking-[0.15em] border-r border-gray-100">Dept</th>
-                                <th className="px-6 py-5 text-left text-xs font-semibold text-slate-400 uppercase tracking-[0.15em] border-r border-gray-100">Category</th>
-                                <th className="px-6 py-5 text-left text-xs font-semibold text-slate-400 uppercase tracking-[0.15em] border-r border-gray-100">Attendance</th>
-                                <th className="px-6 py-5 text-left text-xs font-semibold text-slate-400 uppercase tracking-[0.15em]">Action</th>
+                            <tr className="border-b border-gray-50 bg-slate-50/30">
+                                <th className="px-6 py-5 text-left text-[10px] font-bold text-slate-400 uppercase tracking-[0.15em] border-r border-gray-50">Identity / Team</th>
+                                <th className="px-6 py-5 text-left text-[10px] font-bold text-slate-400 uppercase tracking-[0.15em] border-r border-gray-50">Index</th>
+                                <th className="px-6 py-5 text-left text-[10px] font-bold text-slate-400 uppercase tracking-[0.15em] border-r border-gray-50">Student name</th>
+                                <th className="px-6 py-5 text-left text-[10px] font-bold text-slate-400 uppercase tracking-[0.15em] border-r border-gray-50">Registration</th>
+                                <th className="px-6 py-5 text-center text-[10px] font-bold text-slate-400 uppercase tracking-[0.15em] border-r border-gray-50">Attend.</th>
+                                <th className="px-6 py-5 text-center text-[10px] font-bold text-slate-400 uppercase tracking-[0.15em]">Administer</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -75,37 +106,37 @@ export const MentorReviewEntry = () => {
                                     {t.members?.map((m, idx) => (
                                         <tr key={`${t._id}-${idx}`} className="border-b border-gray-50 last:border-b-0 group hover:bg-slate-50/20 transition-colors">
                                             {idx === 0 && (
-                                                <td rowSpan={t.members.length} className="px-6 py-4 border-r border-gray-100 align-middle text-center w-64 bg-white/50">
-                                                    <p className="text-[11px] font-semibold text-blue-600 uppercase leading-tight tracking-tight">
-                                                        {t.id} - {t.teamName || t.name}
+                                                <td rowSpan={t.members.length} className="px-6 py-6 border-r border-gray-50 align-middle text-center w-64 bg-white">
+                                                    <p className="text-[12px] font-black text-blue-600 uppercase tracking-tight">
+                                                        {t.id}
                                                     </p>
+                                                    <p className="text-[14px] font-bold text-slate-900 mt-1">{t.teamName || t.name}</p>
                                                 </td>
                                             )}
-                                            <td className="px-6 py-4 border-r border-gray-100 text-[13px] font-semibold text-slate-500">S{idx + 1}</td>
-                                            <td className="px-6 py-4 border-r border-gray-100">
+                                            <td className="px-6 py-4 border-r border-gray-50 text-[12px] font-bold text-slate-400 text-center">#{idx + 1}</td>
+                                            <td className="px-6 py-4 border-r border-gray-50">
                                                 <div className="flex items-center gap-3">
-                                                    <Avatar name={m.name} size={24} />
-                                                    <span className="text-[13px] font-semibold text-slate-900">{m.name}</span>
+                                                    <Avatar name={m.name} size={30} />
+                                                    <span className="text-[13px] font-bold text-slate-800">{m.name}</span>
                                                 </div>
                                             </td>
-                                            <td className="px-6 py-4 border-r border-gray-100 text-[13px] font-semibold text-slate-500">{m.sid || "7376231CS145"}</td>
-                                            <td className="px-6 py-4 border-r border-gray-100 text-[13px] font-semibold text-slate-500">{m.dept || "CSE"}</td>
-                                            <td className="px-6 py-4 border-r border-gray-100 text-[13px] font-semibold text-slate-500">Internal</td>
-                                            <td className="px-6 py-4 border-r border-gray-100 text-center">
+                                            <td className="px-6 py-4 border-r border-gray-50 text-[12px] font-bold text-slate-500 uppercase">{m.sid || "21CSXXX"}</td>
+                                            <td className="px-6 py-4 border-r border-gray-50 text-center">
                                                 <button
                                                     onClick={() => handleToggleAttendance(t._id || t.id, m.sid, m.status, m.name, m._id)}
-                                                    className={`px-4 py-1.5 rounded-xl text-[10px] font-semibold uppercase tracking-widest transition-all ${m.status === 'Absent' ? "bg-rose-50 text-rose-500 border border-rose-100" : m.status === 'Late' ? "bg-amber-50 text-amber-600 border border-amber-100" : "bg-emerald-50 text-emerald-600 border border-emerald-100"}`}
+                                                    className={`w-28 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${m.status === 'Absent' ? "bg-rose-50 text-rose-500" : "bg-emerald-50 text-emerald-600"}`}
                                                 >
                                                     {m.status || "Present"}
                                                 </button>
                                             </td>
                                             {idx === 0 && (
-                                                <td rowSpan={t.members.length} className="px-6 py-4 align-middle text-center bg-white/30">
+                                                <td rowSpan={t.members.length} className="px-6 py-4 align-middle text-center bg-white/30 w-44">
                                                     <button
-                                                        onClick={() => setEvalTeam(t)}
-                                                        className="px-4 py-2 rounded-xl border-2 border-blue-100 text-blue-500 text-[11px] font-semibold uppercase tracking-widest hover:bg-blue-500 hover:text-white hover:border-blue-500 transition-all shadow-sm"
+                                                        onClick={() => { setEvalTeam(t); setMarks({}); setFeedback(""); }}
+                                                        disabled={!activeReview}
+                                                        className="px-6 py-3 rounded-2xl bg-white border-2 border-slate-100 text-slate-900 text-[11px] font-black uppercase tracking-widest hover:border-[#6015C1] hover:text-[#6015C1] disabled:opacity-30 disabled:cursor-not-allowed transition-all shadow-sm"
                                                     >
-                                                        Enter Mark
+                                                        Marking Entry
                                                     </button>
                                                 </td>
                                             )}
@@ -118,82 +149,74 @@ export const MentorReviewEntry = () => {
                 </div>
             </Card>
 
-            {/* Evaluation Modal */}
-            {evalTeam && (
+            {/* Assessment Modal */}
+            {evalTeam && activeReview && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-                    <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-md" onClick={() => setEvalTeam(null)} />
-                    <Card className="relative z-10 w-full max-w-4xl p-10 bg-white border-none shadow-2xl rounded-[40px] max-h-[90vh] overflow-y-auto">
+                    <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-md" onClick={() => setEvalTeam(null)} />
+                    <Card className="relative z-10 w-full max-w-5xl p-10 bg-white border-none shadow-2xl rounded-[48px] max-h-[92vh] flex flex-col">
                         <div className="flex justify-between items-start mb-10">
                             <div>
-                                <SectionTitle sub={`Phase: ${activePhase?.title}`}>Team Assessment</SectionTitle>
-                                <div className="mt-2 flex items-center gap-3">
-                                    <Avatar name={evalTeam.teamName} size={32} />
-                                    <span className="text-xl font-semibold text-slate-900">{evalTeam.teamName}</span>
+                                <div className="flex items-center gap-2 mb-2">
+                                    <Pill color="accent">{activePhase?.title}</Pill>
+                                    <Ico path={I.arrow} size={12} style={{ color: '#DDD' }} />
+                                    <span className="text-[12px] font-black text-slate-500 uppercase tracking-widest">{activeReview?.title}</span>
                                 </div>
+                                <h1 className="text-3xl font-black text-slate-900 tracking-tight">Evaluating {evalTeam.teamName || evalTeam.name}</h1>
+                            </div>
+                            <button onClick={() => setEvalTeam(null)} className="p-3 bg-slate-50 rounded-2xl text-slate-400 hover:text-rose-500 transition-colors">
+                                <Ico path={I.plus} size={24} style={{ transform: 'rotate(45deg)' }} />
+                            </button>
+                        </div>
+
+                        <div className="flex-1 overflow-y-auto pr-2 no-scrollbar">
+                            <div className="grid grid-cols-1 gap-6">
+                                {activeReview.rubrics?.map((rub, ri) => (
+                                    <Card key={ri} className="p-8 bg-slate-50/50 border border-slate-100 rounded-[32px] flex flex-col md:flex-row justify-between items-center gap-8 group">
+                                        <div className="flex-1 text-center md:text-left">
+                                            <h4 className="text-lg font-black text-slate-800 tracking-tight mb-2 group-hover:text-[#6015C1] transition-colors">{rub.title}</h4>
+                                            <p className="text-slate-400 text-sm font-medium leading-relaxed">{rub.description || "Evaluation criteria specified in rubrics."}</p>
+                                        </div>
+                                        <div className="flex flex-col items-center gap-2 min-w-[150px]">
+                                            <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Score / {rub.maxMarks}</p>
+                                            <input
+                                                type="number"
+                                                max={rub.maxMarks}
+                                                min={0}
+                                                value={marks[ri] || ""}
+                                                onChange={e => setMarks({ ...marks, [ri]: e.target.value })}
+                                                className="w-24 h-16 bg-white border-none shadow-sm rounded-2xl text-center text-2xl font-black text-slate-900 outline-none focus:ring-4 focus:ring-fuchsia-100 transition-all font-inter"
+                                            />
+                                        </div>
+                                    </Card>
+                                ))}
+                            </div>
+
+                            <div className="mt-8 space-y-3">
+                                <label className="text-[11px] font-black text-slate-300 uppercase tracking-widest ml-4">Mentor Feedback & Narrative</label>
+                                <textarea
+                                    value={feedback}
+                                    onChange={e => setFeedback(e.target.value)}
+                                    placeholder="Briefly describe the team's performance or areas for improvement..."
+                                    className="w-full h-32 p-8 bg-slate-50 border border-slate-100 rounded-[32px] text-slate-700 font-medium text-sm outline-none focus:bg-white focus:border-fuchsia-200 transition-all resize-none shadow-inner"
+                                />
                             </div>
                         </div>
 
-                        <div className="overflow-hidden border border-gray-100 rounded-2xl mb-10">
-                            <table className="w-full border-collapse">
-                                <thead className="bg-slate-50/50">
-                                    <tr>
-                                        <th className="px-6 py-4 text-left text-[11px] font-semibold text-slate-400 uppercase tracking-widest border-b border-gray-100">S.no</th>
-                                        <th className="px-6 py-4 text-left text-[11px] font-semibold text-slate-400 uppercase tracking-widest border-b border-gray-100">Evaluation Parameters</th>
-                                        <th className="px-6 py-4 text-center text-[11px] font-semibold text-slate-400 uppercase tracking-widest border-b border-gray-100">Total Mark</th>
-                                        <th className="px-6 py-4 text-center text-[11px] font-semibold text-slate-400 uppercase tracking-widest border-b border-gray-100">Enter mark</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {[
-                                        { id: 'lit', label: 'Literature Survey', max: 5 },
-                                        { id: 'comp', label: 'Choice of Components / Modules / Equipment for System Development (Preparing the equipment / component list - An Exhaustive list of possible Modern Tools / Components / Equipment that may be used to implement the project is provided, together with a brief comparative study on specification of system being developed / analyzed)', max: 5 },
-                                    ].map((m, i) => (
-                                        <tr key={m.id} className="border-b border-gray-50 last:border-b-0 group hover:bg-slate-50/20 transition-colors">
-                                            <td className="px-6 py-4 text-[13px] font-semibold text-slate-500 w-20">{i + 1}</td>
-                                            <td className="px-6 py-4 text-[13px] font-medium text-slate-600 leading-relaxed pr-10">{m.label}</td>
-                                            <td className="px-6 py-4 text-center text-[13px] font-semibold text-slate-900 w-32">{m.max}</td>
-                                            <td className="px-6 py-4 w-40">
-                                                <input
-                                                    type="number"
-                                                    max={m.max}
-                                                    value={marks[m.id] || 0}
-                                                    onChange={e => setMarks({ ...marks, [m.id]: e.target.value })}
-                                                    className="w-full h-10 bg-white border-2 border-blue-100 rounded-xl text-center text-[13px] font-semibold text-slate-900 outline-none focus:border-blue-400 transition-all"
-                                                />
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                                <tfoot className="bg-slate-50/80">
-                                    <tr>
-                                        <td colSpan={2} className="px-6 py-4 text-center text-[11px] font-semibold text-slate-900 uppercase tracking-[0.2em]">Total Marks</td>
-                                        <td className="px-6 py-4 text-center text-[13px] font-semibold text-slate-900">10</td>
-                                        <td className="px-6 py-4 text-center text-[13px] font-semibold text-blue-600 border-l border-gray-100">{total}</td>
-                                    </tr>
-                                </tfoot>
-                            </table>
-                        </div>
-
-                        <div className="space-y-4">
-                            <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-[0.2em] block px-1">Professional Feedback / Context</label>
-                            <textarea
-                                value={feedback}
-                                onChange={e => setFeedback(e.target.value)}
-                                placeholder="Provide context on evaluation..."
-                                className="w-full h-24 p-6 bg-slate-50 border border-slate-100 rounded-3xl text-sm font-medium text-slate-600 outline-none focus:border-blue-400 focus:bg-white transition-all resize-none"
-                            />
-                        </div>
-
-                        <div className="mt-10 pt-8 border-t border-slate-50 flex gap-4">
-                            <Button onClick={() => setEvalTeam(null)} className="flex-1 h-12 rounded-xl bg-white border border-slate-200 text-slate-400 font-semibold uppercase tracking-widest hover:bg-slate-50 text-[11px]">Close</Button>
-                            <Button className="flex-[3] h-12 rounded-xl bg-blue-600 text-white font-semibold uppercase tracking-widest shadow-xl shadow-blue-100 hover:bg-blue-700 transition-all flex items-center justify-center gap-2 text-[11px]">
-                                <Ico path={I.check} size={16} /> Publish Final Marks
+                        <div className="mt-10 pt-8 border-t border-slate-50 flex items-center justify-between">
+                            <div className="flex flex-col">
+                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Aggregate Performance</span>
+                                <div className="flex items-end gap-2 text-3xl font-black text-slate-900">
+                                    <span>{totalCalculated}</span>
+                                    <span className="text-lg text-slate-200">/ {activeReview?.maxMarks}</span>
+                                </div>
+                            </div>
+                            <Button className="h-16 px-12 rounded-3xl bg-[#6015C1] text-white font-black uppercase tracking-[0.3em] shadow-2xl shadow-fuchsia-100 hover:scale-[1.02] active:scale-95 transition-all text-xs flex items-center justify-center gap-3 border-none">
+                                <Ico path={I.check} size={20} /> Publish Assessment
                             </Button>
                         </div>
                     </Card>
                 </div>
             )}
-
         </div>
     );
 };

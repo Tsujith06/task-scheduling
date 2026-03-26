@@ -2,20 +2,22 @@ import { useState, useEffect, useCallback } from "react";
 import { Ico, I } from "../components/Icons";
 import { Card, SectionTitle, Bar, Avatar, Pill } from "../components/SharedComponents";
 import { Button } from "../components/ui/button";
-import { getWorklogs, createWorklog, deleteWorklog } from "../api";
+import { getWorklogs, createWorklog, deleteWorklog, getProjects, getPhases } from "../api";
 
 export const Worklog = ({ user }) => {
     // Reference Project Deadline (from TeamProject phases)
     const DEADLINE = "2024-05-10"; // May 10, 2024
 
     const [entries, setEntries] = useState([]);
+    const [weeksConfig, setWeeksConfig] = useState([]);
     const [loading, setLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
+    const [deadlineDate, setDeadlineDate] = useState(DEADLINE);
 
     const [form, setForm] = useState({
-        week: "Week 7 (Mar 11 - Mar 17)",
+        week: "",
         date: new Date().toISOString().split('T')[0],
-        task: "Build registration flow",
+        task: "",
         hours: "",
         desc: ""
     });
@@ -23,22 +25,83 @@ export const Worklog = ({ user }) => {
     const fetchLogs = useCallback(async () => {
         try {
             setLoading(true);
-            const res = await getWorklogs();
-            setEntries(res.data);
+            const [logsRes, projRes, phaseRes] = await Promise.all([
+                getWorklogs(),
+                getProjects(),
+                getPhases()
+            ]);
+            
+            setEntries(logsRes.data);
+
+            const curName = user?.name?.trim().toLowerCase();
+            const myProj = projRes.data.find(p => p.members?.some(m => m.email === user?.email || m.name?.toLowerCase() === curName));
+            
+            const phases = phaseRes.data || [];
+            
+            if (myProj) {
+                // Determine Approval Date
+                const approvalDate = myProj.approvalDate ? new Date(myProj.approvalDate) : (myProj.createdAt ? new Date(myProj.createdAt) : new Date());
+                
+                // Determine Last Phase Date
+                let lastPhaseDate = new Date(); // fallback
+                if (phases.length > 0) {
+                    const latestPhase = phases.reduce((latest, p) => {
+                        return new Date(p.endDate) > new Date(latest.endDate) ? p : latest;
+                    }, phases[0]);
+                    if (latestPhase.endDate) lastPhaseDate = new Date(latestPhase.endDate);
+                }
+
+                setDeadlineDate(lastPhaseDate.toISOString().split('T')[0]);
+
+                // Generate weeks
+                const generatedWeeks = [];
+                let currentStart = new Date(approvalDate);
+                
+                // Set to nearest Monday if needed, or simply start from exact date
+                currentStart.setHours(0,0,0,0);
+                
+                let weekNum = 1;
+                while (currentStart <= lastPhaseDate) {
+                    let currentEnd = new Date(currentStart);
+                    currentEnd.setDate(currentEnd.getDate() + 6);
+                    
+                    const fmtOptions = { month: 'short', day: 'numeric' };
+                    generatedWeeks.push({
+                        id: `Week ${weekNum}`,
+                        label: `Week ${weekNum} (${currentStart.toLocaleDateString('en-US', fmtOptions)} - ${currentEnd.toLocaleDateString('en-US', fmtOptions)})`,
+                        startDate: new Date(currentStart),
+                        endDate: new Date(currentEnd),
+                        weekNum
+                    });
+                    
+                    currentStart.setDate(currentStart.getDate() + 7);
+                    weekNum++;
+                }
+                
+                setWeeksConfig(generatedWeeks);
+                
+                if (generatedWeeks.length > 0) {
+                    setForm(prev => ({ ...prev, week: generatedWeeks[0].id }));
+                }
+            }
         } catch (err) {
-            console.error("Failed to fetch worklogs:", err);
+            console.error("Failed to fetch worklog configuration:", err);
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [user]);
 
     useEffect(() => {
         fetchLogs();
     }, [fetchLogs]);
 
+    
+    const loggedWeekIds = new Set(entries.map(e => e.week));
+    const currentWeekTarget = weeksConfig.find(w => new Date() >= w.startDate && new Date() <= w.endDate) || weeksConfig[weeksConfig.length - 1];
+    
     const summary = [
-        { label: "Current Week", value: "07", unit: "/ 18", icon: I.clock, color: "#6015C1" },
-        { label: "Log Deadline", value: "Mar 17", unit: "", icon: I.alert, color: "#F43F5E" },
+        { label: "Current Week", value: currentWeekTarget ? currentWeekTarget.weekNum : "00", unit: weeksConfig.length > 0 ? `/ ${weeksConfig.length}` : "", icon: I.clock, color: "#6015C1" },
+        { label: "Final Deadline", value: new Date(deadlineDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }), unit: "", icon: I.alert, color: "#F43F5E" },
         { label: "Weeks Logged", value: entries.length.toString(), icon: I.check, color: "#10B981" },
     ];
 
@@ -54,8 +117,8 @@ export const Worklog = ({ user }) => {
     const handleSave = async () => {
         try {
             await createWorklog({
-                userId: "65ed7f9f9b1e2c3d4e5f6a7b", // Mock User ID for now
-                userName: "Arjun Kumar",
+                userId: user?._id || "65ed7f9f9b1e2c3d4e5f6a7b",
+                userName: user?.name || "Student Name",
                 week: form.week,
                 date: form.date,
                 task: form.task,
@@ -82,7 +145,7 @@ export const Worklog = ({ user }) => {
                     <div>
                         <div className="flex items-center gap-2 mb-4">
                             <span className="px-2.5 py-1 rounded-lg bg-white/20 text-white text-[10px] font-semibold uppercase tracking-[0.1em]">Current Action</span>
-                            <span className="text-fuchsia-200 font-semibold text-xs uppercase tracking-widest">Week 07 Log</span>
+                            <span className="text-fuchsia-200 font-semibold text-xs uppercase tracking-widest">{currentWeekTarget ? currentWeekTarget.id : "No Active Week"}</span>
                         </div>
                         <h2 className="text-white text-[24px] font-semibold mb-3 tracking-tight">Log Productivity for this Week</h2>
                         <p className="text-fuchsia-100 text-sm font-medium flex items-center gap-2">
@@ -93,7 +156,7 @@ export const Worklog = ({ user }) => {
                     <div className="flex items-center gap-8">
                         <div className="text-center px-8 py-4 bg-white/10 rounded-3xl border border-white/10 backdrop-blur-sm">
                             <p className="text-[10px] font-semibold text-fuchsia-200 uppercase tracking-widest mb-1.5">Deadline Date</p>
-                            <p className="text-2xl font-semibold text-white tracking-tight">March 17, 2024</p>
+                            <p className="text-2xl font-semibold text-white tracking-tight">{currentWeekTarget ? new Date(currentWeekTarget.endDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : "N/A"}</p>
                         </div>
                         <Button onClick={() => setShowModal(true)} className="bg-white text-[#6015C1] hover:bg-fuchsia-50 h-16 px-10 rounded-2xl font-semibold text-base shadow-2xl shadow-black/20 transition-all hover:scale-[1.03] active:scale-[0.97]">
                             <Ico path={I.plus} size={20} cls="mr-2.5" /> Add Worklog
@@ -147,19 +210,19 @@ export const Worklog = ({ user }) => {
                                                 <Ico path={I.trash} size={14} />
                                             </button>
                                         </div>
-                                        <Pill color={e.status === "Approved" ? "green" : e.status === "Rejected" ? "red" : "amber"}>
+                                        <Pill color={e.status === "Approved" ? "green" : (e.status === "Rejected" || e.status === "Declined") ? "red" : "amber"}>
                                             {e.status}
                                         </Pill>
                                     </div>
                                 </div>
                                 <p className="text-[13px] text-slate-500 leading-relaxed mb-4">{e.desc}</p>
 
-                                {e.status === "Rejected" && (
+                                { (e.status === "Rejected" || e.status === "Declined") && (
                                     <div className="mb-4 p-3.5 rounded-xl bg-rose-50 border border-rose-100 flex gap-3">
                                         <Ico path={I.alert} size={14} cls="text-rose-600 mt-0.5" />
                                         <div>
                                             <p className="text-[10px] font-semibold text-rose-600 uppercase tracking-wider mb-0.5">Rejection Reason</p>
-                                            <p className="text-[12px] text-rose-700 font-medium leading-relaxed">{e.rejectReason}</p>
+                                            <p className="text-[12px] text-rose-700 font-medium leading-relaxed">{e.remarks || e.rejectReason}</p>
                                         </div>
                                     </div>
                                 )}
@@ -179,19 +242,24 @@ export const Worklog = ({ user }) => {
                         ))}
 
                         {/* Empty Weeks Visual Guide */}
-                        <div className="mt-8 pt-8 border-t border-dashed border-slate-200">
-                            <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-4">Upcoming Required Logs</p>
-                            <div className="grid grid-cols-2 gap-3 opacity-40">
-                                <div className="p-3 border border-slate-100 rounded-xl bg-slate-50 flex items-center justify-between">
-                                    <span className="text-xs font-medium text-slate-600">Week 8</span>
-                                    <span className="text-[10px] font-semibold text-slate-400 italic">Scheduled</span>
-                                </div>
-                                <div className="p-3 border border-slate-100 rounded-xl bg-slate-50 flex items-center justify-between">
-                                    <span className="text-xs font-medium text-slate-600">Week 9</span>
-                                    <span className="text-[10px] font-semibold text-slate-400 italic">Scheduled</span>
+                        {weeksConfig.filter(w => !loggedWeekIds.has(w.id)).length > 0 && (
+                            <div className="mt-8 pt-8 border-t border-dashed border-slate-200">
+                                <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-4">Upcoming Required Logs</p>
+                                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 opacity-60">
+                                    {weeksConfig.filter(w => !loggedWeekIds.has(w.id)).slice(0, 4).map((w, i) => (
+                                        <div key={i} className="p-3 border border-slate-100 rounded-xl bg-slate-50 flex flex-col gap-1 items-start justify-center">
+                                            <span className="text-xs font-semibold text-slate-600 block">{w.id}</span>
+                                            <span className="text-[9px] font-semibold text-slate-400 block whitespace-nowrap">{new Date(w.startDate).toLocaleDateString('en-US', {month:'short', day:'numeric'})} - {new Date(w.endDate).toLocaleDateString('en-US', {month:'short', day:'numeric'})}</span>
+                                        </div>
+                                    ))}
+                                    {weeksConfig.filter(w => !loggedWeekIds.has(w.id)).length > 4 && (
+                                         <div className="p-3 border border-slate-100 rounded-xl bg-slate-50 flex items-center justify-center opacity-50">
+                                            <span className="text-xs font-semibold text-slate-400 block">+{weeksConfig.filter(w => !loggedWeekIds.has(w.id)).length - 4} more</span>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
-                        </div>
+                        )}
                     </div>
                 </Card>
             </div>
@@ -210,10 +278,18 @@ export const Worklog = ({ user }) => {
                             <div className="space-y-1.5">
                                 <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Target Week</label>
                                 <select value={form.week} onChange={e => setForm({ ...form, week: e.target.value })} className="w-full h-11 px-4 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-700 outline-none focus:ring-2 focus:ring-[#6015C1]/10">
-                                    <option>Week 7 (Mar 11 - Mar 17)</option>
-                                    <option disabled>Week 8 (Mar 18 - Mar 24)</option>
-                                    <option disabled>Week 9 (Mar 25 - Mar 31)</option>
+                                    {weeksConfig.map(w => (
+                                        <option key={w.id} value={w.id} disabled={loggedWeekIds.has(w.id)}>
+                                            {w.label} {loggedWeekIds.has(w.id) ? "(Logged)" : ""}
+                                        </option>
+                                    ))}
+                                    {weeksConfig.length === 0 && <option value="">No timeline available</option>}
                                 </select>
+                            </div>
+
+                            <div className="space-y-1.5">
+                                <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Task / Title</label>
+                                <input value={form.task} onChange={e => setForm({ ...form, task: e.target.value })} placeholder="Short title for your work" className="w-full h-11 px-4 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-700 outline-none focus:ring-2 focus:ring-[#6015C1]/10" />
                             </div>
 
                             <div className="space-y-1.5">

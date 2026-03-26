@@ -1,18 +1,27 @@
 import { useState, useEffect } from "react";
 import { Card, SectionTitle, Pill, Avatar } from "../components/SharedComponents";
 import { Ico, I } from "../components/Icons";
-import { getProjects, reviewProposal } from "../api";
+import { getProjects, reviewProposal, getPhases } from "../api";
 
 export const MentorApproval = ({ user }) => {
     const [teams, setTeams] = useState([]);
     const [loading, setLoading] = useState(true);
     const [selectedTeam, setSelectedTeam] = useState(null);
     const [rejectionReason, setRejectionReason] = useState("");
+    const [isSelectionActive, setIsSelectionActive] = useState(false);
 
     const fetchTeams = async () => {
         try {
-            const res = await getProjects({ mentorId: user._id });
-            setTeams(res.data);
+            const [projRes, phasesRes] = await Promise.all([
+                getProjects({ mentorId: user._id }),
+                getPhases()
+            ]);
+            setTeams(projRes.data);
+            
+            if (phasesRes && phasesRes.data) {
+                const psPhase = phasesRes.data.find(p => p.title?.toLowerCase() === 'project selection');
+                setIsSelectionActive(psPhase && (psPhase.status === 'Ongoing' || psPhase.status === 'Active'));
+            }
         } catch (err) {
             console.error(err);
         } finally {
@@ -25,6 +34,7 @@ export const MentorApproval = ({ user }) => {
     }, [user._id]);
 
     const handleReview = async (teamId, status) => {
+        if (!isSelectionActive) return alert("Project Selection Phase is not active. You cannot review proposals right now.");
         if (status === 'Rejected' && !rejectionReason) {
             alert("Please provide a reason for rejection");
             return;
@@ -177,6 +187,12 @@ export const MentorApproval = ({ user }) => {
                                     </button>
                                 </div>
                             </div>
+                            
+                            {!isSelectionActive && (
+                                <p className="text-[10px] text-rose-400 font-bold uppercase tracking-widest text-center mt-4">
+                                    Review actions are locked: Project Selection Phase is not active.
+                                </p>
+                            )}
                         </Card>
                     ) : (
                         <div className="h-[400px] flex flex-col items-center justify-center border-2 border-dashed border-slate-100 rounded-3xl text-slate-300">

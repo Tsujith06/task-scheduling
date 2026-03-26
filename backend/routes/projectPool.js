@@ -43,4 +43,19 @@ router.delete('/:id', async (req, res) => {
     }
 });
 
+// Bulk Upload Project Pool
+router.post('/bulk', async (req, res) => {
+    try {
+        const { titles } = req.body;
+        const saved = await ProjectPool.insertMany(titles, { ordered: false });
+        res.status(201).json({ status: 'success', count: saved.length });
+    } catch (err) {
+        res.status(400).json({
+            status: 'error',
+            message: err.message,
+            count: err.insertedDocs?.length || 0
+        });
+    }
+});
+
 module.exports = router;

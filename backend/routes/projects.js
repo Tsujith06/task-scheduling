@@ -25,13 +25,14 @@ router.post('/formation', async (req, res) => {
         const { teamName, teamLeadId, leadName, leadSid } = req.body;
 
         // Check if lead already in a team
-        const existing = await Project.findOne({ "members.sid": leadSid });
+        const lead = await User.findById(teamLeadId);
+        if (!lead) return res.status(404).json({ message: 'Lead user not found' });
+
+        const existing = await Project.findOne({ "members.email": lead.email });
         if (existing) return res.status(400).json({ message: 'User already belongs to a team' });
 
 
 
-        const lead = await User.findById(teamLeadId);
-        if (!lead) return res.status(404).json({ message: 'Lead user not found' });
 
         const project = new Project({
             id: `TEAM-${Date.now()}`,
@@ -119,6 +120,7 @@ router.put('/:id/review', async (req, res) => {
             project.rejectionReason = rejectionReason;
         } else {
             project.rejectionReason = undefined;
+            if (status === 'Approved') project.approvalDate = new Date();
             // Maybe initialize milestones here
         }
         await project.save();
@@ -147,7 +149,7 @@ router.get('/:id', async (req, res) => {
                     project = await Project.findOne({
                         $or: [
                             { teamLead: user._id },
-                            { "members.sid": user.sid }
+                            { "members.email": user.email }
                         ]
                     });
 
@@ -167,5 +169,90 @@ router.get('/:id', async (req, res) => {
     }
 });
 
+
+// Add Member
+router.put('/:id/members/add', async (req, res) => {
+    try {
+        const { userId } = req.body;
+        const id = req.params.id;
+        
+        // Robust lookup: check both custom ID and _id
+        let project = await Project.findOne({ id: id });
+        if (!project && mongoose.Types.ObjectId.isValid(id)) {
+            project = await Project.findById(id);
+        }
+        
+        if (!project) return res.status(404).json({ message: 'Project not found' });
+
+        const user = await User.findById(userId);
+        if (!user) return res.status(404).json({ message: 'User not found' });
+
+        // Check if user already in a team
+        const existing = await Project.findOne({ "members.email": user.email });
+        if (existing) return res.status(400).json({ message: 'User already belongs to a team' });
+
+        project.members.push({
+            name: user.name,
+            email: user.email,
+            sid: user.sid,
+            dept: user.dept,
+            role: 'Member',
+            status: 'Present'
+        });
+
+        await project.save();
+        res.json(project);
+    } catch (err) {
+        res.status(400).json({ message: err.message });
+    }
+});
+
+// Change Project Title
+router.put('/:id/change-title', async (req, res) => {
+    try {
+        const { title } = req.body;
+        const id = req.params.id;
+
+        // Robust lookup: check both custom ID and _id
+        let project = await Project.findOne({ id: id });
+        if (!project && mongoose.Types.ObjectId.isValid(id)) {
+            project = await Project.findById(id);
+        }
+
+        if (!project) return res.status(404).json({ message: 'Project not found' });
+
+        // Check if title already taken by another team
+        const taken = await Project.findOne({ name: title, id: { $ne: project.id } });
+        if (taken) return res.status(400).json({ message: 'This title is already selected by another team' });
+
+        project.name = title;
+        await project.save();
+        res.json(project);
+    } catch (err) {
+        res.status(400).json({ message: err.message });
+    }
+});
+
+// Bulk Remove Members
+router.put('/:id/members/remove-bulk', async (req, res) => {
+    try {
+        const { sids } = req.body;
+        const id = req.params.id;
+
+        // Robust lookup: check both custom ID and _id
+        let project = await Project.findOne({ id: id });
+        if (!project && mongoose.Types.ObjectId.isValid(id)) {
+            project = await Project.findById(id);
+        }
+
+        if (!project) return res.status(404).json({ message: 'Project not found' });
+
+        project.members = project.members.filter(m => !sids.includes(m.sid));
+        await project.save();
+        res.json(project);
+    } catch (err) {
+        res.status(400).json({ message: err.message });
+    }
+});
 
 module.exports = router;

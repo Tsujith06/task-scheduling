@@ -37,14 +37,14 @@ export const Bar = ({ pct, color = "#6015C1", h = 6 }) => (
 );
 
 export const Card = ({ children, className = "", ...props }) => (
-    <div className={`glass-card rounded-[24px] ${className} hover:fluent-shadow transition-shadow duration-300`} {...props}>
+    <div className={`glass-card rounded-[16px] ${className} hover:fluent-shadow transition-shadow duration-300`} {...props}>
         {children}
     </div>
 );
 
 export const SectionTitle = ({ children, sub }) => (
     <div className="mb-6">
-        <h2 className="text-base font-semibold text-slate-800 tracking-tight">{children}</h2>
+        <h2 className="text-2xl font-semibold text-slate-800 tracking-tight">{children}</h2>
         {sub && <p className="text-[11px] text-slate-400 font-medium mt-1 uppercase tracking-wider">{sub}</p>}
     </div>
 );

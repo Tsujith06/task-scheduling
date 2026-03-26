@@ -44,6 +44,19 @@ export const ReviewsMarks = ({ user }) => {
 
     return (
         <div className="p-7 space-y-7 max-w-7xl mx-auto">
+            {/* Hero header */}
+            <div className="py-4 flex items-center justify-between">
+                <div className="relative z-10 font-['Poppins']">
+                    <p className="text-slate-400 text-[10px] font-semibold uppercase tracking-[0.2em] mb-2 font-semibold">Good morning 👋</p>
+                    <h2 className="text-black text-3xl font-semibold tracking-tight uppercase">{user?.name}</h2>
+                    <div className="flex flex-wrap items-center gap-3 mt-4">
+                        <span className="bg-[#6015C1] text-white text-[10px] font-semibold uppercase tracking-widest px-4 py-1.5 rounded-xl border border-purple-200">Reviews & Marks</span>
+                        <div className="w-1.5 h-1.5 rounded-full bg-slate-200" />
+                        <span className="text-slate-500 text-[11px] font-semibold uppercase tracking-wider">Academic Performance Summary</span>
+                    </div>
+                </div>
+            </div>
+
             {/* Header / Summary */}
             <div className="grid grid-cols-2 lg:grid-cols-3 gap-6">
                 {summary.map((s, i) => (

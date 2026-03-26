@@ -4,7 +4,7 @@ import { Card, SectionTitle, Avatar, Pill } from "../components/SharedComponents
 import { Button } from "../components/ui/button";
 import { getLeaves, updateLeave, getReviews } from "../api";
 
-export const AdminReports = () => {
+export const AdminReports = ({ user }) => {
     const [tab, setTab] = useState("performance");
     const [leaves, setLeaves] = useState([]);
     const [reviews, setReviews] = useState([]);
@@ -35,17 +35,12 @@ export const AdminReports = () => {
     return (
         <div className="p-7 space-y-6 max-w-7xl mx-auto">
             {/* Hero header */}
-            <div className="py-4 flex items-center justify-between">
-                <div>
-                    <p className="text-slate-400 text-[10px] font-semibold uppercase tracking-[0.2em] mb-2">Academic Audit 📈</p>
-                    <h2 className="text-black text-3xl font-semibold tracking-tight">Reports & Approvals</h2>
-                    <div className="flex flex-wrap items-center gap-3 mt-4">
-                        <span className="bg-slate-50 text-slate-900 text-[10px] font-semibold uppercase tracking-widest px-3 py-1.5 rounded-xl border border-slate-200">Post-Evaluation</span>
-                        <div className="w-1.5 h-1.5 rounded-full bg-slate-200" />
-                        <span className="text-slate-500 text-[11px] font-semibold uppercase tracking-wider">Audit Active</span>
-                    </div>
+            <div className="py-4 flex items-center justify-between mb-8">
+                <div className="relative z-10 font-['Poppins']">
+                    <p className="text-slate-400 text-[10px] font-semibold uppercase tracking-[0.2em] mb-2 font-semibold">Good morning 👋</p>
+                    <h2 className="text-black text-3xl font-semibold tracking-tight uppercase">Reports & Approvals</h2>
                 </div>
-                <div className="flex gap-1 p-1 bg-gray-100 rounded-xl">
+                <div className="flex gap-1 p-1 bg-gray-100/50 rounded-xl border border-slate-100 shadow-sm">
                     {["performance", "approvals"].map(t => (
                         <button key={t} onClick={() => setTab(t)}
                             className={`px-5 py-2 rounded-lg text-[11px] font-semibold uppercase tracking-widest transition-all ${tab === t ? "bg-white text-gray-900 shadow-sm" : "text-gray-400 hover:text-gray-600"}`}>

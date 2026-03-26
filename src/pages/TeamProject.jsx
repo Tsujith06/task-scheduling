@@ -3,7 +3,7 @@ import { Ico, I } from "../components/Icons";
 import { Pill, Avatar, Bar, Card, SectionTitle } from "../components/SharedComponents";
 import {
     getProject, getUsers, createInvitation, getProjectPool,
-    getSettings, createTeam, selectMentor, submitProposal, getTeamInvitations
+    getSettings, createTeam, selectMentor, submitProposal, getTeamInvitations, getPhases
 } from "../api";
 
 export const TeamProject = ({ user }) => {
@@ -11,6 +11,7 @@ export const TeamProject = ({ user }) => {
     const [loading, setLoading] = useState(true);
     const [settings, setSettings] = useState(null);
     const [invitations, setInvitations] = useState([]);
+    const [isSelectionActive, setIsSelectionActive] = useState(false);
 
     // UI States
     const [newTeamName, setNewTeamName] = useState("");
@@ -27,12 +28,19 @@ export const TeamProject = ({ user }) => {
     const fetchData = async () => {
         try {
             setLoading(true);
-            const [projRes, setRes] = await Promise.all([
+            const [projRes, setRes, phasesRes] = await Promise.all([
                 getProject(user._id), // Fetch by user ID (handles team lead reference too)
-                getSettings()
+                getSettings(),
+                getPhases()
             ]);
             setProject(projRes.data);
             setSettings(setRes.data);
+            
+            if (phasesRes && phasesRes.data) {
+                const psPhase = phasesRes.data.find(p => p.title?.toLowerCase() === 'project selection');
+                // The phase must explicitly be 'Ongoing' or 'Active' to allow selection
+                setIsSelectionActive(psPhase && (psPhase.status === 'Ongoing' || psPhase.status === 'Active'));
+            }
 
             if (projRes.data) {
                 const invRes = await getTeamInvitations(projRes.data.id || projRes.data._id);
@@ -137,7 +145,7 @@ export const TeamProject = ({ user }) => {
             const found = res.data.find(u => u.email.toLowerCase() === search.toLowerCase());
             if (found) {
                 // Check if already in team members
-                if (project.members.some(m => m.sid === found.sid)) {
+                if (project.members.some(m => m.email === found.email)) {
                     alert("User already in team");
                 } else if (found.hasTeam) {
                     alert("This student is already a member of another team.");
@@ -171,6 +179,18 @@ export const TeamProject = ({ user }) => {
 
         // --- NO TEAM UI ---
         if (!project) {
+            if (!isSelectionActive) {
+                return (
+                    <div className="max-w-2xl mx-auto font-['Poppins'] h-[calc(100vh-100px)] flex flex-col items-center justify-center text-center overflow-hidden">
+                        <div className="w-20 h-20 bg-slate-100 rounded-[20px] flex items-center justify-center mb-6 text-slate-300">
+                            <Ico path={I.clock} size={40} />
+                        </div>
+                        <h1 className="text-3xl font-bold text-slate-800 tracking-tight uppercase mb-2">Phase Not Active</h1>
+                        <p className="text-slate-500 font-medium max-w-md mx-auto mb-8">The Project Selection phase is not currently active. You cannot create a team at this time.</p>
+                    </div>
+                );
+            }
+
             return (
                 <div className="max-w-2xl mx-auto font-['Poppins'] h-[calc(100vh-100px)] flex flex-col items-center justify-center text-center overflow-hidden">
                     {/* 1. Illustration at Top */}
@@ -192,14 +212,14 @@ export const TeamProject = ({ user }) => {
                     <div className="w-full max-w-sm space-y-4 px-6">
                         <input
                             placeholder="Enter Team Name..."
-                            className="w-full h-14 px-6 bg-white border border-slate-200 rounded-2xl text-sm outline-none focus:ring-4 focus:ring-[#6015C1]/10 focus:border-[#6015C1]/30 transition-all text-center font-bold text-slate-700 shadow-sm"
+                            className="w-full h-[44px] px-6 bg-white border border-slate-200 rounded-[8px] text-sm outline-none focus:ring-4 focus:ring-[#6015C1]/10 focus:border-[#6015C1]/30 transition-all text-center font-bold text-slate-700 shadow-sm"
                             value={newTeamName}
                             onChange={e => setNewTeamName(e.target.value)}
                         />
 
                         <button
                             onClick={handleCreateTeam}
-                            className="w-full h-14 bg-[#6015C1] text-white rounded-2xl font-bold uppercase tracking-widest text-xs shadow-lg shadow-purple-100 hover:bg-[#4a0fb0] active:scale-[0.98] transition-all"
+                            className="w-full h-[44px] bg-[#6015C1] text-white rounded-[12px] font-bold uppercase tracking-widest text-xs shadow-lg shadow-purple-100 hover:bg-[#4a0fb0] active:scale-[0.98] transition-all"
                         >
                             Create Team
                         </button>
@@ -217,7 +237,7 @@ export const TeamProject = ({ user }) => {
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 mb-10">
                     <div className="animate-in fade-in slide-in-from-left-2 duration-500">
                         <div className="flex items-center gap-4 mb-3">
-                            <div className="w-12 h-12 bg-white shadow-sm border border-slate-100 rounded-2xl flex items-center justify-center text-[#6015C1]">
+                            <div className="w-12 h-12 bg-white shadow-sm border border-slate-100 rounded-[16px] flex items-center justify-center text-[#6015C1]">
                                 <Ico path={I.team || I.user} size={24} />
                             </div>
                             <div>
@@ -225,7 +245,7 @@ export const TeamProject = ({ user }) => {
                                     {project.teamName || "Project Team"}
                                 </h1>
                                 <p className="text-[10px] font-bold text-slate-300 uppercase tracking-widest mt-2 flex items-center gap-2">
-                                    <span className="bg-slate-100 px-2 py-0.5 rounded text-slate-400">ID: {project.id}</span>
+                                    <span className="bg-slate-100 px-2 py-0.5 rounded-[12px] text-slate-400">ID: {project.id}</span>
                                     <span>•</span>
                                     <span>Faculty Mentorship Program</span>
                                 </p>
@@ -240,16 +260,16 @@ export const TeamProject = ({ user }) => {
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-2 bg-slate-100/50 p-1.5 rounded-2xl border border-slate-100 shadow-inner min-w-[280px]">
+                    <div className="flex items-center gap-2 bg-slate-100/50 p-1.5 rounded-[16px] border border-slate-100 shadow-inner min-w-[280px]">
                         <button
                             onClick={() => setSubTab('team')}
-                            className={`flex-1 px-6 py-2.5 text-[10px] font-bold uppercase tracking-[0.15em] rounded-xl transition-all flex items-center justify-center gap-2 ${subTab === 'team' ? 'bg-white text-[#6015C1] shadow-sm border border-slate-100 ring-4 ring-black/[0.02]' : 'text-slate-400 hover:text-slate-600'}`}
+                            className={`flex-1 px-6 py-2.5 text-[10px] font-bold uppercase tracking-[0.15em] rounded-[12px] transition-all flex items-center justify-center gap-2 ${subTab === 'team' ? 'bg-white text-[#6015C1] shadow-sm border border-slate-100 ring-4 ring-black/[0.02]' : 'text-slate-400 hover:text-slate-600'}`}
                         >
                             <Ico path={I.user} size={14} /> Team
                         </button>
                         <button
                             onClick={() => setSubTab('project')}
-                            className={`flex-1 px-6 py-2.5 text-[10px] font-bold uppercase tracking-[0.15em] rounded-xl transition-all flex items-center justify-center gap-2 ${subTab === 'project' ? 'bg-white text-[#6015C1] shadow-sm border border-slate-100 ring-4 ring-black/[0.02]' : 'text-slate-400 hover:text-slate-600'}`}
+                            className={`flex-1 px-6 py-2.5 text-[10px] font-bold uppercase tracking-[0.15em] rounded-[12px] transition-all flex items-center justify-center gap-2 ${subTab === 'project' ? 'bg-white text-[#6015C1] shadow-sm border border-slate-100 ring-4 ring-black/[0.02]' : 'text-slate-400 hover:text-slate-600'}`}
                         >
                             <Ico path={I.chart} size={14} /> Project
                         </button>
@@ -266,17 +286,17 @@ export const TeamProject = ({ user }) => {
                                 </div>
                                 <p className="text-xs text-slate-400 font-medium">Manage your team members and their account permissions here.</p>
                             </div>
-                            {isLead && project.status === 'Formation' && (
+                            {isLead && project.status === 'Formation' && isSelectionActive && (
                                 <button
                                     onClick={() => setInviteModal(true)}
-                                    className="h-10 px-6 bg-gradient-to-r from-orange-500 to-rose-500 text-white rounded-xl text-[11px] font-bold uppercase tracking-widest shadow-lg shadow-orange-100 flex items-center gap-2 hover:scale-[1.02] transition-all"
+                                    className="h-[44px] px-6 bg-gradient-to-r from-orange-500 to-rose-500 text-white rounded-[12px] text-[11px] font-bold uppercase tracking-widest shadow-lg shadow-orange-100 flex items-center gap-2 hover:scale-[1.02] transition-all"
                                 >
                                     <Ico path={I.plus} size={14} /> Invite Member
                                 </button>
                             )}
                         </div>
 
-                        <Card className="border border-slate-100 shadow-sm overflow-hidden">
+                        <Card className="border border-slate-100 shadow-sm overflow-hidden rounded-[16px]">
                             <div className="overflow-x-auto">
                                 <table className="w-full text-left">
                                     <thead>
@@ -286,8 +306,7 @@ export const TeamProject = ({ user }) => {
                                             <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Email</th>
                                             <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Roll No</th>
                                             <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Dept</th>
-                                            <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center">Permission</th>
-                                            <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-right">Action</th>
+                                            <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center">Role</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-50">
@@ -320,20 +339,15 @@ export const TeamProject = ({ user }) => {
                                                     <span className="text-[11px] font-bold text-slate-500">{m.dept || 'CS'}</span>
                                                 </td>
                                                 <td className="px-6 py-5 text-center">
-                                                    {m.displayStatus === 'Pending' ? (
-                                                        <span className="text-[10px] font-bold text-orange-500 uppercase tracking-widest bg-orange-50 px-3 py-1 rounded-full">Pending</span>
-                                                    ) : (
-                                                        <span className={`text-[10px] font-bold uppercase tracking-widest ${m.role === 'Team Lead' ? 'text-[#6015C1] bg-purple-50' : 'text-emerald-500 bg-emerald-50'} px-3 py-1 rounded-full`}>
-                                                            {m.role || 'Member'}
-                                                        </span>
-                                                    )}
-                                                </td>
-                                                <td className="px-6 py-5 text-right">
-                                                    {isLead && m.role !== 'Team Lead' && (
-                                                        <button className="p-2 text-rose-300 hover:text-rose-500 transition-colors opacity-0 group-hover:opacity-100">
-                                                            <Ico path={I.trash || I.close} size={16} />
-                                                        </button>
-                                                    )}
+                                                    <div className="flex flex-col items-center gap-1.5">
+                                                        {m.displayStatus === 'Pending' ? (
+                                                            <span className="text-[10px] font-bold text-orange-500 uppercase tracking-widest bg-orange-50 px-3 py-1 rounded-full">Pending</span>
+                                                        ) : (
+                                                            <span className={`text-[10px] font-bold uppercase tracking-widest ${m.role === 'Team Lead' ? 'text-[#6015C1] bg-purple-50' : 'text-emerald-500 bg-emerald-50'} px-3 py-1 rounded-full`}>
+                                                                {m.role || 'Member'}
+                                                            </span>
+                                                        )}
+                                                    </div>
                                                 </td>
                                             </tr>
                                         ))}
@@ -365,20 +379,26 @@ export const TeamProject = ({ user }) => {
                                 {isLead ? (
                                     <div className="space-y-4">
                                         <button
-                                            disabled={project.members.length < 2}
+                                            disabled={project.members.length < 2 || !isSelectionActive}
                                             onClick={async () => {
+                                                if (!isSelectionActive) return alert("The Project Selection phase is no longer active.");
                                                 try {
                                                     await selectMentor(project.id, { status: 'MentorSelection' });
                                                     fetchData();
                                                 } catch (e) { alert("Failed to move to next stage"); }
                                             }}
-                                            className="h-14 px-10 bg-[#6015C1] text-white rounded-2xl font-bold uppercase tracking-[0.2em] text-[11px] shadow-2xl shadow-purple-200 hover:bg-[#4a0fb0] active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                            className="h-[44px] px-10 bg-[#6015C1] text-white rounded-[12px] font-bold uppercase tracking-[0.2em] text-[11px] shadow-2xl shadow-purple-200 hover:bg-[#4a0fb0] active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                                         >
                                             Begin Project Submission
                                         </button>
                                         {project.members.length < 2 && (
                                             <p className="text-[10px] text-rose-400 font-bold uppercase tracking-widest">
                                                 Need at least 2 members to proceed
+                                            </p>
+                                        )}
+                                        {!isSelectionActive && (
+                                            <p className="text-[10px] text-rose-400 font-bold uppercase tracking-widest mt-2">
+                                                Project Selection Phase is currently locked or not started by Admin.
                                             </p>
                                         )}
                                     </div>
@@ -395,7 +415,7 @@ export const TeamProject = ({ user }) => {
                         {/* 2 & 3. Combined stage: MENTOR SELECTION & PROPOSAL SUBMISSION */}
                         {(project.status === 'MentorSelection' || project.status === 'ProposalSubmission' || project.status === 'Rejected') && (
                             <div className="max-w-3xl mx-auto">
-                                <Card className="p-8 space-y-8 shadow-sm border-none bg-white rounded-[32px]">
+                                <Card className="p-8 space-y-8 shadow-sm border-none bg-white rounded-[16px]">
                                     <div>
                                         <div className="flex items-center gap-2 mb-1">
                                             <h2 className="text-sm font-bold text-slate-800 uppercase tracking-tight">Project Proposal Form</h2>
@@ -404,8 +424,8 @@ export const TeamProject = ({ user }) => {
                                     </div>
 
                                     {project.status === 'Rejected' && (
-                                        <div className="p-4 bg-rose-50 border border-rose-100 rounded-2xl flex gap-3">
-                                            <div className="w-8 h-8 bg-rose-100 rounded-lg flex items-center justify-center text-rose-500 shrink-0">
+                                        <div className="p-4 bg-rose-50 border border-rose-100 rounded-[12px] flex gap-3">
+                                            <div className="w-8 h-8 bg-rose-100 rounded-[8px] flex items-center justify-center text-rose-500 shrink-0">
                                                 <Ico path={I.close} size={14} />
                                             </div>
                                             <div>
@@ -427,7 +447,7 @@ export const TeamProject = ({ user }) => {
                                                 <input
                                                     type="text"
                                                     placeholder="Search mentor by name or department..."
-                                                    className="w-full h-14 pl-12 pr-6 bg-slate-50 border border-slate-100 rounded-2xl text-sm outline-none focus:ring-4 focus:ring-[#6015C1]/5 focus:border-[#6015C1]/20 transition-all font-bold text-slate-700 placeholder:text-slate-300"
+                                                    className="w-full h-[44px] pl-12 pr-6 bg-slate-50 border border-slate-100 rounded-[8px] text-sm outline-none focus:ring-4 focus:ring-[#6015C1]/5 focus:border-[#6015C1]/20 transition-all font-bold text-slate-700 placeholder:text-slate-300"
                                                     value={search}
                                                     onChange={(e) => {
                                                         setSearch(e.target.value);
@@ -439,7 +459,7 @@ export const TeamProject = ({ user }) => {
                                                     }}
                                                 />
                                                 {selectedMentor && (
-                                                    <div className="absolute right-4 top-1/2 -translate-y-1/2 px-3 py-1.5 bg-emerald-50 text-emerald-600 rounded-lg text-[10px] font-bold uppercase tracking-wider flex items-center gap-2 border border-emerald-100">
+                                                    <div className="absolute right-4 top-1/2 -translate-y-1/2 px-3 py-1.5 bg-emerald-50 text-emerald-600 rounded-[8px] text-[10px] font-bold uppercase tracking-wider flex items-center gap-2 border border-emerald-100">
                                                         <Ico path={I.check} size={10} /> Selected: {selectedMentor.name}
                                                     </div>
                                                 )}
@@ -447,7 +467,7 @@ export const TeamProject = ({ user }) => {
 
                                             {/* Search Results Dropdown */}
                                             {searchResults.length > 0 && (
-                                                <div className="absolute z-50 left-0 right-0 mt-2 bg-white rounded-2xl shadow-2xl border border-slate-100 max-h-[280px] overflow-y-auto no-scrollbar py-2">
+                                                <div className="absolute z-50 left-0 right-0 mt-2 bg-white rounded-[12px] shadow-2xl border border-slate-100 max-h-[280px] overflow-y-auto no-scrollbar py-2">
                                                     <div className="px-5 py-2 border-b border-slate-50 mb-1">
                                                         <span className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">Available Staff</span>
                                                     </div>
@@ -482,7 +502,7 @@ export const TeamProject = ({ user }) => {
                                             <div className="space-y-2">
                                                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Proposed Project Title</label>
                                                 <select
-                                                    className="w-full h-12 px-5 bg-slate-50 border border-slate-100 rounded-xl text-sm outline-none font-bold text-slate-700"
+                                                    className="w-full h-[44px] px-5 bg-slate-50 border border-slate-100 rounded-[8px] text-sm outline-none font-bold text-slate-700"
                                                     value={proposal.name}
                                                     onChange={e => setProposal({ ...proposal, name: e.target.value })}
                                                 >
@@ -493,7 +513,7 @@ export const TeamProject = ({ user }) => {
                                             <div className="space-y-2">
                                                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Project Abstract</label>
                                                 <textarea
-                                                    className="w-full p-5 bg-slate-50 border border-slate-100 rounded-2xl text-sm outline-none focus:ring-4 focus:ring-[#6015C1]/10 focus:border-[#6015C1]/30 transition-all min-h-[160px] font-medium text-slate-600 leading-relaxed"
+                                                    className="w-full p-5 bg-slate-50 border border-slate-100 rounded-[12px] text-sm outline-none focus:ring-4 focus:ring-[#6015C1]/10 focus:border-[#6015C1]/30 transition-all min-h-[160px] font-medium text-slate-600 leading-relaxed"
                                                     placeholder="Describe your solution, methodology, and expected outcomes..."
                                                     value={proposal.abstract}
                                                     onChange={e => setProposal({ ...proposal, abstract: e.target.value })}
@@ -502,18 +522,27 @@ export const TeamProject = ({ user }) => {
                                             <div className="space-y-2">
                                                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">SRS Documentation Link</label>
                                                 <input
-                                                    className="w-full h-12 px-5 bg-slate-50 border border-slate-100 rounded-xl text-sm outline-none font-bold text-slate-700"
+                                                    className="w-full h-[44px] px-5 bg-slate-50 border border-slate-100 rounded-[8px] text-sm outline-none font-bold text-slate-700"
                                                     placeholder="Link to GDrive, OneDrive, or Notion..."
                                                     value={proposal.srsUrl}
                                                     onChange={e => setProposal({ ...proposal, srsUrl: e.target.value })}
                                                 />
                                             </div>
                                             <button
-                                                onClick={handleSubmitProposal}
-                                                className="w-full h-14 bg-[#6015C1] text-white rounded-2xl font-bold uppercase tracking-[0.2em] text-[11px] shadow-xl shadow-purple-100 hover:bg-[#4a0fb0] transition-all"
+                                                disabled={!isSelectionActive}
+                                                onClick={() => {
+                                                    if (!isSelectionActive) return alert("Project Selection Phase is locked.");
+                                                    handleSubmitProposal();
+                                                }}
+                                                className="w-full h-[44px] bg-[#6015C1] text-white rounded-[12px] font-bold uppercase tracking-[0.2em] text-[11px] shadow-xl shadow-purple-100 hover:bg-[#4a0fb0] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                                             >
                                                 Submit Final Proposal
                                             </button>
+                                            {!isSelectionActive && (
+                                                <p className="text-[10px] text-rose-400 font-bold uppercase tracking-widest text-center mt-2">
+                                                    Action locked: Project Selection Phase is not active.
+                                                </p>
+                                            )}
                                         </div>
                                     </div>
                                 </Card>
@@ -523,13 +552,13 @@ export const TeamProject = ({ user }) => {
                         {/* 4. Project: PENDING APPROVAL */}
                         {project.status === 'PendingApproval' && (
                             <div className="flex flex-col items-center justify-center py-20 text-center">
-                                <div className="w-24 h-24 bg-amber-50 rounded-[40px] flex items-center justify-center mb-8 relative">
+                                <div className="w-20 h-20 bg-amber-50 rounded-[16px] flex items-center justify-center mb-8 relative">
                                     <Ico path={I.clock} size={40} />
                                 </div>
                                 <h1 className="text-2xl font-bold text-slate-800">Awaiting Proposal Approval</h1>
                                 <p className="text-sm text-slate-400 max-w-md mx-auto mt-3 font-medium leading-relaxed">Your project proposal has been submitted to <b>{project.mentor?.name}</b>. You will be notified once they review your submission.</p>
 
-                                <Card className="mt-12 max-w-lg w-full p-8 bg-slate-50/50 border-none shadow-inner rounded-[32px]">
+                                <Card className="mt-12 max-w-lg w-full p-8 bg-slate-50/50 border-none shadow-inner rounded-[16px]">
                                     <div className="flex flex-col items-center">
                                         <Pill color="accent">Submission Overview</Pill>
                                         <h3 className="text-sm font-bold text-slate-700 mt-6">{project.name}</h3>
@@ -543,7 +572,7 @@ export const TeamProject = ({ user }) => {
                         {project.status === 'Approved' && (
                             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                                 <div className="lg:col-span-2 space-y-8">
-                                    <Card className="p-10 border-none shadow-sm relative overflow-hidden bg-white">
+                                    <Card className="p-10 border-none shadow-sm relative overflow-hidden bg-white rounded-[16px]">
                                         <div className="mb-10">
                                             <Pill color="accent">Project Information</Pill>
                                             <h2 className="text-3xl font-bold text-slate-800 tracking-tight mt-6 uppercase">{project.name}</h2>
@@ -553,7 +582,7 @@ export const TeamProject = ({ user }) => {
                                         <div className="space-y-6">
                                             <div>
                                                 <label className="text-[10px] font-bold text-slate-300 uppercase tracking-widest block mb-4">Abstract & Scope</label>
-                                                <div className="p-6 bg-slate-50/50 rounded-[32px] border border-slate-50 relative">
+                                                <div className="p-6 bg-slate-50/50 rounded-[16px] border border-slate-50 relative">
                                                     <div className="absolute -top-3 left-6 px-3 bg-white border border-slate-100 rounded-full text-[10px] font-bold text-slate-400">DETAIL VIEW</div>
                                                     <p className="text-sm font-medium text-slate-600 leading-relaxed italic">
                                                         "{project.abstract}"
@@ -563,7 +592,7 @@ export const TeamProject = ({ user }) => {
 
                                             <div className="pt-6">
                                                 <label className="text-[10px] font-bold text-slate-300 uppercase tracking-widest block mb-4">Official Submission</label>
-                                                <a href={project.srsUrl} target="_blank" className="inline-flex items-center gap-4 px-8 py-4 bg-slate-900 text-white rounded-2xl hover:bg-slate-800 transition-all shadow-xl shadow-slate-200 group">
+                                                <a href={project.srsUrl} target="_blank" className="inline-flex items-center gap-4 px-8 py-4 bg-slate-900 text-white rounded-[12px] hover:bg-slate-800 transition-all shadow-xl shadow-slate-200 group">
                                                     <div className="w-8 h-8 bg-white/10 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
                                                         <Ico path={I.external || I.link} size={14} />
                                                     </div>
@@ -578,12 +607,12 @@ export const TeamProject = ({ user }) => {
                                 </div>
 
                                 <div className="space-y-8">
-                                    <Card className="p-8 border-none shadow-sm bg-white overflow-hidden">
+                                    <Card className="p-8 border-none shadow-sm bg-white overflow-hidden rounded-[16px]">
                                         <div className="mb-8">
                                             <SectionTitle sub="Assigned Academic Head">Project Mentor</SectionTitle>
                                         </div>
 
-                                        <div className="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                                        <div className="flex items-center gap-4 p-4 bg-slate-50 rounded-[12px] border border-slate-100">
                                             <Avatar name={project.mentor?.name} size={56} />
                                             <div>
                                                 <p className="text-sm font-bold text-slate-800 leading-none">{project.mentor?.name}</p>
@@ -611,7 +640,7 @@ export const TeamProject = ({ user }) => {
             {inviteModal && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
                     <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-md" onClick={() => !inviteLoading && setInviteModal(false)} />
-                    <Card className="relative z-10 w-full max-w-md p-10 bg-white border-none shadow-2xl animate-in zoom-in-95 duration-200 rounded-[32px]">
+                    <Card className="relative z-10 w-full max-w-md p-10 bg-white border-none shadow-2xl animate-in zoom-in-95 duration-200 rounded-[16px]">
                         <div className="flex flex-col items-center text-center mb-8">
                             <div className="w-16 h-16 bg-purple-50 rounded-2xl flex items-center justify-center mb-4 text-[#6015C1]">
                                 <Ico path={I.email || I.user} size={32} />
@@ -628,14 +657,14 @@ export const TeamProject = ({ user }) => {
                                     placeholder="e.g. arjun.kumar@gmail.com"
                                     value={search}
                                     onChange={(e) => setSearch(e.target.value)}
-                                    className="w-full h-14 px-6 bg-slate-50 border border-slate-100 rounded-2xl text-sm outline-none focus:ring-4 focus:ring-[#6015C1]/10 focus:border-[#6015C1]/30 transition-all font-bold text-slate-700 shadow-inner"
+                                    className="w-full h-[44px] px-6 bg-slate-50 border border-slate-100 rounded-[8px] text-sm outline-none focus:ring-4 focus:ring-[#6015C1]/10 focus:border-[#6015C1]/30 transition-all font-bold text-slate-700 shadow-inner"
                                 />
                             </div>
 
                             <button
                                 onClick={handleDirectInvite}
                                 disabled={inviteLoading || !search}
-                                className={`w-full h-14 rounded-2xl font-bold uppercase tracking-widest text-[11px] shadow-lg transition-all ${inviteLoading || !search ? 'bg-slate-100 text-slate-300' : 'bg-[#6015C1] text-white shadow-purple-100 hover:scale-[1.02] active:scale-[0.98]'}`}
+                                className={`w-full h-[44px] rounded-[12px] font-bold uppercase tracking-widest text-[11px] shadow-lg transition-all ${inviteLoading || !search ? 'bg-slate-100 text-slate-300' : 'bg-[#6015C1] text-white shadow-purple-100 hover:scale-[1.02] active:scale-[0.98]'}`}
                             >
                                 {inviteLoading ? 'Sending...' : 'Send Invitation'}
                             </button>
