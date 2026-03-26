@@ -1,27 +1,30 @@
 import { useState, useEffect } from "react";
 import { Ico, I } from "../components/Icons";
 import { Pill, Avatar, Bar, Card, SectionTitle } from "../components/SharedComponents";
-import { getTasks, getProjects, getPhases } from "../api";
+import { getTasks, getProjects, getPhases, getProjectPool } from "../api";
 
 export const Dashboard = ({ user }) => {
     const [myTasks, setMyTasks] = useState([]);
     const [allTasks, setAllTasks] = useState([]);
     const [project, setProject] = useState(null);
+    const [projectDomain, setProjectDomain] = useState(null);
     const [phases, setPhases] = useState([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         const fetchAll = async () => {
             try {
-                const [taskRes, projRes, phasesRes] = await Promise.allSettled([
+                const [taskRes, projRes, phasesRes, poolRes] = await Promise.allSettled([
                     getTasks(),
                     getProjects(),
                     getPhases(),
+                    getProjectPool()
                 ]);
 
                 const tasks = taskRes.status === 'fulfilled' ? taskRes.value.data : [];
                 const projects = projRes.status === 'fulfilled' ? projRes.value.data : [];
                 const phs = phasesRes.status === 'fulfilled' ? phasesRes.value.data : [];
+                const pool = poolRes.status === 'fulfilled' ? poolRes.value.data : [];
 
                 const curName = user?.name?.trim().toLowerCase();
                 const mine = tasks.filter(t => t.assignee?.trim().toLowerCase() === curName);
@@ -30,10 +33,19 @@ export const Dashboard = ({ user }) => {
                 const myProj = projects.find(p =>
                     p.members?.some(m => m.email === user?.email || m.name?.toLowerCase() === curName)
                 );
+                
+                let myDomain = "General";
+                if (myProj && myProj.name) {
+                    const poolEntry = pool.find(pl => pl.title === myProj.name);
+                    if (poolEntry && poolEntry.domain) {
+                        myDomain = poolEntry.domain;
+                    }
+                }
 
                 setAllTasks(tasks);
                 setMyTasks(mine);
                 setProject(myProj || null);
+                setProjectDomain(myDomain);
                 setPhases(phs);
             } catch (err) {
                 console.error("Dashboard fetch error:", err);
@@ -178,15 +190,38 @@ export const Dashboard = ({ user }) => {
                                             <Pill color={isActive ? 'accent' : isUpcoming ? 'blue' : 'gray'}>{p.status}</Pill>
                                         </div>
                                         <p className="text-[12px] text-slate-400 font-semibold mt-1">{fmt(p.startDate)} → {fmt(p.endDate)}</p>
-                                        {p.targets?.length > 0 && (
-                                            <div className="flex flex-wrap gap-1.5 mt-2">
-                                                {p.targets.slice(0, 3).map((t, ti) => (
-                                                    <span key={ti} className="text-[10px] font-bold text-[#6015C1] bg-white border border-fuchsia-100 px-2 py-0.5 rounded-md">
-                                                        {t.domain || t.title}
-                                                    </span>
-                                                ))}
-                                            </div>
-                                        )}
+                                        
+                                        {(() => {
+                                            // Only display targets matching the student's project domain, or "General" targets if no domain matches completely
+                                            let relevantTargets = [];
+                                            if (p.targets?.length > 0) {
+                                                if (user?.role === 'Student' && projectDomain) {
+                                                    relevantTargets = p.targets.filter(t => t.domain === projectDomain || t.domain === 'General');
+                                                    // If none specifically map to their domain or general, show nothing instead of everything
+                                                } else {
+                                                    // Admin/Mentor view: show everything, although dashboard is usually student.
+                                                    relevantTargets = p.targets;
+                                                }
+                                            }
+
+                                            if (relevantTargets.length === 0) return null;
+
+                                            return (
+                                                <div className="flex flex-col gap-2.5 mt-4">
+                                                    {relevantTargets.map((t, ti) => (
+                                                        <div key={ti} className="flex flex-col gap-1 p-3 bg-white border border-slate-100/50 rounded-[10px] shadow-sm">
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="text-[10px] font-black text-white bg-[#6015C1] px-2 py-0.5 rounded-md uppercase tracking-wider">{t.domain || 'General'}</span>
+                                                                <span className="text-[12px] font-bold text-slate-800 tracking-tight leading-none">{t.title}</span>
+                                                            </div>
+                                                            {t.description && (
+                                                                <p className="text-[11px] font-medium text-slate-500 leading-snug">{t.description}</p>
+                                                            )}
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            );
+                                        })()}
                                     </div>
                                 </div>
                             );
