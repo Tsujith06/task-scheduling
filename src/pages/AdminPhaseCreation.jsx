@@ -15,14 +15,7 @@ export const AdminPhaseCreation = ({ user }) => {
         startDate: "",
         endDate: "",
         targetGroups: [{ domain: "AI", items: [{ title: "", description: "" }] }],
-        status: "Upcoming",
-        reviews: [{
-            title: "",
-            startDate: "",
-            endDate: "",
-            maxMarks: 100,
-            rubrics: [{ title: "", description: "", maxMarks: 10 }]
-        }]
+        status: "Upcoming"
     });
 
     const [loading, setLoading] = useState(false);
@@ -75,75 +68,6 @@ export const AdminPhaseCreation = ({ user }) => {
             return cleaned;
         }
         return obj;
-    };
-
-    const addReview = () => {
-        setForm(prev => ({
-            ...prev,
-            reviews: [...(prev.reviews || []), {
-                title: "",
-                startDate: "",
-                endDate: "",
-                maxMarks: 100,
-                rubrics: [{ title: "", description: "", maxMarks: 10 }]
-            }]
-        }));
-    };
-
-    const removeReview = (rIndex) => {
-        setForm(prev => ({
-            ...prev,
-            reviews: (prev.reviews || []).filter((_, i) => i !== rIndex)
-        }));
-    };
-
-    const handleReviewChange = (rIndex, field, value) => {
-        setForm(prev => {
-            const reviews = [...(prev.reviews || [])];
-            if (reviews[rIndex]) {
-                reviews[rIndex] = { ...reviews[rIndex], [field]: value };
-            }
-            return { ...prev, reviews };
-        });
-    };
-
-    const addRubric = (rIndex) => {
-        setForm(prev => {
-            const reviews = [...(prev.reviews || [])];
-            if (reviews[rIndex]) {
-                const rubrics = [...(reviews[rIndex].rubrics || [])];
-                rubrics.push({ title: "", description: "", maxMarks: 10 });
-                reviews[rIndex] = { ...reviews[rIndex], rubrics };
-            }
-            return { ...prev, reviews };
-        });
-    };
-
-    const removeRubric = (rIndex, rbIndex) => {
-        setForm(prev => {
-            const reviews = [...(prev.reviews || [])];
-            if (reviews[rIndex]) {
-                const rubrics = (reviews[rIndex].rubrics || []).filter((_, i) => i !== rbIndex);
-                const total = rubrics.reduce((acc, curr) => acc + (Number(curr.maxMarks) || 0), 0);
-                reviews[rIndex] = { ...reviews[rIndex], rubrics, maxMarks: total };
-            }
-            return { ...prev, reviews };
-        });
-    };
-
-    const handleRubricChange = (rIndex, rbIndex, field, value) => {
-        setForm(prev => {
-            const reviews = [...(prev.reviews || [])];
-            if (reviews[rIndex]) {
-                const rubrics = [...(reviews[rIndex].rubrics || [])];
-                if (rubrics[rbIndex]) {
-                    rubrics[rbIndex] = { ...rubrics[rbIndex], [field]: value };
-                    const total = rubrics.reduce((acc, curr) => acc + (Number(curr.maxMarks) || 0), 0);
-                    reviews[rIndex] = { ...reviews[rIndex], rubrics, maxMarks: total };
-                }
-            }
-            return { ...prev, reviews };
-        });
     };
 
     const addTargetGroup = () => {
@@ -216,11 +140,6 @@ export const AdminPhaseCreation = ({ user }) => {
             });
             delete payload.targetGroups; // Don't send the UI structural groups to backend
             
-            // Filter out any empty/unfilled reviews so Mongoose validation doesn't fail
-            if (payload.reviews) {
-                payload.reviews = payload.reviews.filter(r => r.title?.trim() && r.startDate && r.endDate);
-            }
-            
             if (isEditing && !form.isVirtual) {
                 await updatePhase(editId, payload);
             } else {
@@ -247,14 +166,7 @@ export const AdminPhaseCreation = ({ user }) => {
             startDate: "",
             endDate: "",
             targetGroups: [{ domain: "AI", items: [{ title: "", description: "" }] }],
-            status: "Upcoming",
-            reviews: [{
-                title: "",
-                startDate: "",
-                endDate: "",
-                maxMarks: 100,
-                rubrics: [{ title: "", description: "", maxMarks: 10 }]
-            }]
+            status: "Upcoming"
         });
         setIsEditing(false);
         setEditId(null);
@@ -270,25 +182,13 @@ export const AdminPhaseCreation = ({ user }) => {
             }))
             : [{ domain: "AI", items: [{ title: "", description: "" }] }];
 
-        const formattedReviews = (phase.reviews || []).map(r => ({
-            ...r,
-            startDate: r.startDate ? new Date(r.startDate).toISOString().split('T')[0] : "",
-            endDate: r.endDate ? new Date(r.endDate).toISOString().split('T')[0] : "",
-            rubrics: (r.rubrics || []).map(rb => ({ 
-                title: String(rb.title || ""), 
-                description: String(rb.description || ""), 
-                maxMarks: Number(rb.maxMarks) || 0 
-            }))
-        }));
-
         setForm({
             title: phase.title || "",
             description: phase.description || "",
             startDate: phase.startDate ? new Date(phase.startDate).toISOString().split('T')[0] : "",
             endDate: phase.endDate ? new Date(phase.endDate).toISOString().split('T')[0] : "",
             status: phase.status || "Upcoming",
-            targetGroups: initialGroups,
-            reviews: formattedReviews
+            targetGroups: initialGroups
         });
         
         setIsEditing(!phase.isVirtual);
@@ -413,29 +313,6 @@ export const AdminPhaseCreation = ({ user }) => {
                                     )}
                                 </div>
                             </div>
-
-                            {/* <div className="flex flex-col mt-10">
-                                <p className="text-base font-bold text-slate-900 uppercase mb-3">
-                                    Review
-                                </p>
-                            </div>
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                {p.reviews?.map((r, ri) => (
-                                    <div key={ri} className="p-6 bg-slate-50/50 rounded-[16px] border border-slate-100/50 space-y-4">
-                                        <div className="flex justify-between items-center">
-                                            <h4 className="font-bold text-slate-800 tracking-tight">{r.title}</h4>
-                                            <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded-lg uppercase tracking-widest">{r.maxMarks} Marks</span>
-                                        </div>
-                                        <div className="flex items-center gap-2 text-[11px] text-slate-400 font-semibold">
-                                            <Ico path={I.clock} size={14} />
-                                            <span>{new Date(r.startDate).toLocaleDateString()} — {new Date(r.endDate).toLocaleDateString()}</span>
-                                        </div>
-
-                                    </div>
-                                ))}
-                            </div> */}
-                        </div>
                     </Card>
                 ))}
             </div>
@@ -605,114 +482,6 @@ export const AdminPhaseCreation = ({ user }) => {
                                     </div>
                                 </div>
                                 )}
-
-                                {/* Reviews Section */}
-                                {/* <div className="space-y-8">
-                                    <div className="flex justify-between items-center px-2">
-                                        <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest">Configured Reviews</h3>
-                                        <button 
-                                            type="button" 
-                                            onClick={addReview}
-                                            className="px-6 py-2.5 bg-[#6015C1] text-white rounded-[12px] text-[11px] font-bold uppercase tracking-widest shadow-lg shadow-fuchsia-100 hover:scale-105 active:scale-95 transition-all"
-                                        >
-                                            Add Review Session
-                                        </button>
-                                    </div>
-
-                                    <div className="space-y-10">
-                                        {form.reviews.map((rev, ri) => (
-                                            <div key={ri} className="p-8 bg-white rounded-[16px] border border-slate-100 relative group/rev">
-                                                {form.reviews.length > 1 && (
-                                                    <button 
-                                                        type="button"
-                                                        onClick={() => removeReview(ri)}
-                                                        className="absolute top-6 right-6 p-2 rounded-[12px] bg-white border border-slate-100 text-slate-300 hover:text-rose-500 transition-all shadow-sm"
-                                                    >
-                                                        <Ico path={I.trash} size={16} />
-                                                    </button>
-                                                )}
-                                                
-                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                                    <div className="col-span-full space-y-2">
-                                                        <label className="text-sm font-medium text-slate-700 ml-2">Review Title</label>
-                                                        <input 
-                                                            required
-                                                            value={rev.title}
-                                                            onChange={e => handleReviewChange(ri, "title", e.target.value)}
-                                                            placeholder="e.g. Design Presentation"
-                                                            className="w-full h-[44px] px-4 bg-white border border-slate-200 rounded-[8px] focus:border-[#6015C1] transition-all outline-none font-normal text-slate-800 text-sm"
-                                                        />
-                                                    </div>
-                                                    <div className="space-y-2">
-                                                        <label className="text-sm font-medium text-slate-700 ml-2">Commences</label>
-                                                        <input 
-                                                            required type="date"
-                                                            value={rev.startDate}
-                                                            onChange={e => handleReviewChange(ri, "startDate", e.target.value)}
-                                                            className="w-full h-[44px] px-4 bg-white border border-slate-200 rounded-[8px] outline-none font-normal text-slate-800 text-sm"
-                                                        />
-                                                    </div>
-                                                    <div className="space-y-2">
-                                                        <label className="text-sm font-medium text-slate-700 ml-2">Concludes</label>
-                                                        <input 
-                                                            required type="date"
-                                                            value={rev.endDate}
-                                                            onChange={e => handleReviewChange(ri, "endDate", e.target.value)}
-                                                            className="w-full h-[44px] px-4 bg-white border border-slate-200 rounded-[8px] outline-none font-normal text-slate-800 text-sm"
-                                                        />
-                                                    </div>
-
-                                                    <div className="col-span-full pt-6 space-y-4">
-                                                        <div className="flex justify-between items-center px-1">
-                                                            <p className="text-[11px] font-black text-[#6015C1] uppercase tracking-[0.2em]">Marking Rubrics</p>
-                                                            <button 
-                                                                type="button" 
-                                                                onClick={() => addRubric(ri)}
-                                                                className="text-[13px] font-black text-slate-400 hover:text-[#6015C1] transition-colors"
-                                                            >+ Append Criterion</button>
-                                                        </div>
-                                                        
-                                                        <div className="space-y-3">
-                                                            {rev.rubrics.map((rub, rbi) => (
-                                                                <div key={rbi} className="flex gap-3 items-start animate-in slide-in-from-right-4 duration-300">
-                                                                    <input 
-                                                                        required
-                                                                        value={rub.title}
-                                                                        onChange={e => handleRubricChange(ri, rbi, "title", e.target.value)}
-                                                                        placeholder="Criterion Title (e.g. Code Quality)"
-                                                                        className="flex-[2] h-[44px] px-4 bg-white border border-slate-100 rounded-[8px] text-sm font-normal text-slate-700 outline-none"
-                                                                    />
-                                                                    <input 
-                                                                        required
-                                                                        type="number"
-                                                                        value={rub.maxMarks}
-                                                                        onChange={e => handleRubricChange(ri, rbi, "maxMarks", e.target.value)}
-                                                                        placeholder="Marks"
-                                                                        className="flex-1 h-[44px] px-4 bg-white border border-slate-100 rounded-[8px] text-sm font-normal text-slate-700 text-center outline-none"
-                                                                    />
-                                                                    <button 
-                                                                        type="button"
-                                                                        onClick={() => removeRubric(ri, rbi)}
-                                                                        className="p-3.5 text-slate-300 hover:text-rose-500 transition-colors"
-                                                                    >
-                                                                        <Ico path={I.plus} size={16} style={{ transform: 'rotate(45deg)' }} />
-                                                                    </button>
-                                                                </div>
-                                                            ))}
-                                                            
-                                                            <div className="flex justify-end pt-2 pr-12">
-                                                                <div className="flex items-center gap-3 py-2 px-4 bg-fuchsia-50/50 rounded-xl border border-fuchsia-100/50">
-                                                                    <span className="text-[10px] font-black text-fuchsia-400 uppercase tracking-widest">Total Review Marks:</span>
-                                                                    <span className="text-sm font-black text-[#6015C1]">{rev.rubrics.reduce((acc, curr) => acc + (Number(curr.maxMarks) || 0), 0)}</span>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div> */}
                             </div>
                             
                             <div className="p-10 border-t border-slate-50 bg-slate-50/20">
