@@ -313,6 +313,7 @@ export const AdminPhaseCreation = ({ user }) => {
                                     )}
                                 </div>
                             </div>
+                        </div>
                     </Card>
                 ))}
             </div>
