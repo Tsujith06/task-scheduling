@@ -41,7 +41,7 @@ export const AdminPhaseCreation = ({ user }) => {
                 }
                 return { ...p, targets };
             });
-            if (!normalized.find(p => p.title.trim().toLowerCase() === "project selection")) {
+            if (!normalized.find(p => p.title?.trim().toLowerCase() === "project selection")) {
                 normalized.unshift({
                     _id: "virtual-ps",
                     title: "Project Selection",
@@ -467,8 +467,8 @@ export const AdminPhaseCreation = ({ user }) => {
                                                 value={form.title}
                                                 onChange={e => setForm({...form, title: e.target.value})}
                                                 placeholder="e.g. Second Review Phase (Semester VI)"
-                                                readOnly={form.title.trim().toLowerCase() === "project selection"}
-                                                className={`w-full h-[44px] px-4 bg-white border border-slate-200 rounded-[8px] focus:border-[#6015C1] text-slate-900 font-normal text-sm transition-all outline-none font-inter ${form.title.trim().toLowerCase() === "project selection" ? "bg-slate-100 text-slate-500" : ""}`} 
+                                                readOnly={form.title?.trim().toLowerCase() === "project selection"}
+                                                className={`w-full h-[44px] px-4 bg-white border border-slate-200 rounded-[8px] focus:border-[#6015C1] text-slate-900 font-normal text-sm transition-all outline-none font-inter ${form.title?.trim().toLowerCase() === "project selection" ? "bg-slate-100 text-slate-500" : ""}`} 
                                             />
                                         </div>
                                         <div className="space-y-3">
@@ -505,7 +505,7 @@ export const AdminPhaseCreation = ({ user }) => {
                                 </div>
 
                                 {/* Targets Section */}
-                                {form.title.trim().toLowerCase() !== "project selection" && (
+                                {form.title?.trim().toLowerCase() !== "project selection" && (
                                 <div className="space-y-8">
                                     <div className="flex justify-between items-center px-2">
                                         <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest">Phase Targets</h3>
