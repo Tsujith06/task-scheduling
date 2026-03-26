@@ -34,16 +34,6 @@ export const AdminPhaseCreation = ({ user }) => {
                 }
                 return { ...p, targets };
             });
-            if (!normalized.find(p => p.title?.trim().toLowerCase() === "project selection")) {
-                normalized.unshift({
-                    _id: "virtual-ps",
-                    title: "Project Selection",
-                    description: "Default phase for student team formation, project selection, and mentor approval.",
-                    status: "Upcoming",
-                    targets: [],
-                    isVirtual: true
-                });
-            }
             setPhases(normalized);
         } catch (err) {
             console.error("Failed to fetch phases:", err);
@@ -140,7 +130,7 @@ export const AdminPhaseCreation = ({ user }) => {
             });
             delete payload.targetGroups; // Don't send the UI structural groups to backend
             
-            if (isEditing && !form.isVirtual) {
+            if (isEditing) {
                 await updatePhase(editId, payload);
             } else {
                 await createPhase(payload);
@@ -190,10 +180,8 @@ export const AdminPhaseCreation = ({ user }) => {
             status: phase.status || "Upcoming",
             targetGroups: initialGroups
         });
-        
-        setIsEditing(!phase.isVirtual);
-        setEditId(phase.isVirtual ? null : phase._id);
-        setForm(prev => ({ ...prev, isVirtual: phase.isVirtual }));
+        setIsEditing(true);
+        setEditId(phase._id);
         setShowModal(true);
     };
 
@@ -208,7 +196,6 @@ export const AdminPhaseCreation = ({ user }) => {
     };
 
     const handleStartPhase = async (phase) => {
-        if (phase.isVirtual) return alert("Please set the dates and construct the phase first before starting.");
         if (!window.confirm("Start this phase? This will trigger logic depending on phase type.")) return;
         try {
             setLoading(true);
@@ -325,7 +312,7 @@ export const AdminPhaseCreation = ({ user }) => {
                     <Card className="relative z-10 w-full max-w-4xl bg-white border-none shadow-2xl rounded-[16px] overflow-hidden animate-in zoom-in-95 duration-500 flex flex-col max-h-[90vh]">
                         <div className="p-10 border-b border-slate-50 flex justify-between items-center bg-slate-50/30">
                             <div>
-                                <h1 className="text-2xl font-semibold text-slate-900 tracking-tight">{isEditing ? 'Modify Phase' : form.isVirtual ? 'Setup Selection Phase' : 'Initialize Phase'}</h1>
+                                <h1 className="text-2xl font-semibold text-slate-900 tracking-tight">{isEditing ? 'Modify Phase' : 'Initialize Phase'}</h1>
                                 <p className="text-slate-400 font-medium text-sm">Configure hierarchy of reviews and rubrics.</p>
                             </div>
                             <button onClick={() => setShowModal(false)} className="w-12 h-12 rounded-2xl bg-white border border-slate-100 flex items-center justify-center text-slate-400 hover:text-rose-500 hover:shadow-lg transition-all">
@@ -345,8 +332,8 @@ export const AdminPhaseCreation = ({ user }) => {
                                                 value={form.title}
                                                 onChange={e => setForm({...form, title: e.target.value})}
                                                 placeholder="e.g. Second Review Phase (Semester VI)"
-                                                readOnly={form.title?.trim().toLowerCase() === "project selection"}
-                                                className={`w-full h-[44px] px-4 bg-white border border-slate-200 rounded-[8px] focus:border-[#6015C1] text-slate-900 font-normal text-sm transition-all outline-none font-inter ${form.title?.trim().toLowerCase() === "project selection" ? "bg-slate-100 text-slate-500" : ""}`} 
+                                                readOnly={false}
+                                                className={`w-full h-[44px] px-4 bg-white border border-slate-200 rounded-[8px] focus:border-[#6015C1] text-slate-900 font-normal text-sm transition-all outline-none font-inter`} 
                                             />
                                         </div>
                                         <div className="space-y-3">
@@ -383,7 +370,6 @@ export const AdminPhaseCreation = ({ user }) => {
                                 </div>
 
                                 {/* Targets Section */}
-                                {form.title?.trim().toLowerCase() !== "project selection" && (
                                 <div className="space-y-8">
                                     <div className="flex justify-between items-center px-2">
                                         <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest">Phase Targets</h3>
@@ -482,7 +468,6 @@ export const AdminPhaseCreation = ({ user }) => {
                                         ))}
                                     </div>
                                 </div>
-                                )}
                             </div>
                             
                             <div className="p-10 border-t border-slate-50 bg-slate-50/20">
