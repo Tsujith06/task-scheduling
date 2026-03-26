@@ -215,7 +215,7 @@ export const AdminPhaseCreation = ({ user }) => {
             {/* Hero header */}
             <div className="py-4 flex items-center justify-between">
                 <div className="relative z-10 font-['Poppins']">
-                    <p className="text-slate-400 text-[10px] font-semibold uppercase tracking-[0.2em] mb-2 font-semibold">Good morning 👋</p>
+
                     <h2 className="text-black text-3xl font-semibold tracking-tight uppercase">Phase & Timeline Setup</h2>
                 </div>
                 <Button 
